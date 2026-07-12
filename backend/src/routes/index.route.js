@@ -6,6 +6,8 @@ import authRoute from "../modules/user/user.route.js";
 import adminRoute from "../modules/admin/admin.route.js";
 import dashboardRoute from "../modules/dashboard/dashboard.route.js";
 import departmentRoute from "../modules/department/department.route.js";
+import assetCategoryRoute from "../modules/assetCategory/assetCategory.route.js";
+import employeeRoute from "../modules/employee/employee.route.js";
 import assetRoute from "../modules/asset/asset.route.js";
 import reportRoute from "../modules/report/report.route.js";
 import notificationRoute from "../modules/notification/notification.route.js";
@@ -36,6 +38,8 @@ router.use("/auth", authRoute);
 router.use("/admin", adminRoute);
 router.use("/dashboard", dashboardRoute);
 router.use("/departments", departmentRoute);
+router.use("/categories", assetCategoryRoute);
+router.use("/employees", employeeRoute);
 router.use("/assets", assetRoute);
 router.use("/reports", reportRoute);
 router.use("/notifications", notificationRoute);
@@ -53,3 +57,4 @@ router.use("/resources", resourceRoute);
 router.use("/activity-logs", activityLogRoute);
 
 export default router;
+
