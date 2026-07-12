@@ -19,3 +19,13 @@ export const closeAuditCycle = async (cycleId) => {
   const { data } = await api.patch(`/audit-cycles/${cycleId}/close`);
   return data.cycle;
 };
+
+export const createAuditCycle = async (body) => {
+  const { data } = await api.post("/audit-cycles", body);
+  return data.cycle;
+};
+
+export const startAuditCycle = async (cycleId) => {
+  const { data } = await api.patch(`/audit-cycles/${cycleId}/start`);
+  return data.cycle;
+};
