@@ -25,20 +25,7 @@ export const useAuthStore = create(
       isLoading: false,
       error: null,
       isDeptHead: false,
-
-      // ── Role Helpers (computed dynamically) ──
-      get isAdmin() {
-        return get().user?.role === ROLES.ADMIN;
-      },
-      get isAssetManager() {
-        return get().user?.role === ROLES.ASSET_MANAGER;
-      },
-      get isDepartmentHead() {
-        return get().user?.role === ROLES.DEPARTMENT_HEAD || get().isDeptHead;
-      },
-      get isEmployee() {
-        return get().user?.role === ROLES.EMPLOYEE;
-      },
+      _hasHydrated: false, // Hydration flag to solve refresh-redirect race conditions
 
       getRoleLabel: () => {
         const role = get().user?.role;
@@ -62,6 +49,8 @@ export const useAuthStore = create(
       },
 
       // ── Actions ──
+      setHasHydrated: (status) => set({ _hasHydrated: status }),
+
       checkDepartmentHeadStatus: async () => {
         const user = get().user;
         if (!user) return;
@@ -170,13 +159,17 @@ export const useAuthStore = create(
     }),
     {
       name: 'assetflow-auth-storage', // localStorage key
-      // State values we want to persist (default preserves everything in the state object)
+      // State values we want to persist
       partialize: (state) => ({
         user: state.user,
         token: state.token,
         isAuthenticated: state.isAuthenticated,
         isDeptHead: state.isDeptHead,
       }),
+      // Triggered when rehydration completes to notify page loaders
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

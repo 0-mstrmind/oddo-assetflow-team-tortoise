@@ -21,8 +21,8 @@ const COLUMNS = [
 ];
 
 export default function MaintenanceKanbanPage() {
-  const { isAdmin, isAssetManager } = useAuthStore();
-  const canManage = isAdmin || isAssetManager; // manager/admin can drag and drop cards
+  const { user } = useAuthStore();
+  const canManage = user?.role === 'admin' || user?.role === 'manager'; // manager/admin can drag and drop cards
 
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

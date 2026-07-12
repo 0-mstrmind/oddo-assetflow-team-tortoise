@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 
 export default function ReportsPage() {
-  const { isAdmin, isAssetManager } = useAuthStore();
-  const isAuthorized = isAdmin || isAssetManager;
+  const { user } = useAuthStore();
+  const isAuthorized = user?.role === 'admin' || user?.role === 'manager';
 
   const [assets, setAssets] = useState([]);
   const [departments, setDepartments] = useState([]);
