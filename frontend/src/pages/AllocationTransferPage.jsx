@@ -7,6 +7,7 @@ import {
   allocateAsset,
   submitTransferRequest,
 } from '@/services/allocation.service';
+import { toast } from 'sonner';
 import {
   ArrowRightLeft,
   User,
@@ -43,16 +44,33 @@ export default function AllocationTransferPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [transferSuccessMsg, setTransferSuccessMsg] = useState('');
 
+  const mapHistory = (histList) => {
+    return histList.map((h) => ({
+      id: h._id || h.id,
+      employeeName: h.employeeId?.name || 'Unknown Employee',
+      status: h.status,
+      allocatedAt: h.createdAt ? new Date(h.createdAt).toLocaleDateString() : 'N/A',
+      expectedReturnDate: h.expectedReturnDate ? new Date(h.expectedReturnDate).toLocaleDateString() : null,
+      allocatedByName: h.allocatedBy?.name || 'Administrator',
+    }));
+  };
+
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const [assetList, employeeList] = await Promise.all([
-        getAssets(),
-        getEmployees(),
-      ]);
-      setAssets(assetList);
-      setEmployees(employeeList);
-      setIsLoading(false);
+      try {
+        const [assetList, employeeList] = await Promise.all([
+          getAssets(),
+          getEmployees(),
+        ]);
+        setAssets(assetList.map(a => ({ ...a, id: a._id || a.id })));
+        setEmployees(employeeList.map(e => ({ ...e, id: e._id || e.id })));
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to load assets or employees data');
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadData();
   }, []);
@@ -68,9 +86,14 @@ export default function AllocationTransferPage() {
       setAssigneeId('');
       setExpectedReturnDate('');
 
-      getAllocationHistory(selectedAssetId).then((hist) => {
-        setHistory(hist);
-      });
+      getAllocationHistory(selectedAssetId)
+        .then((hist) => {
+          setHistory(mapHistory(hist));
+        })
+        .catch((err) => {
+          console.error(err);
+          toast.error('Failed to fetch allocation history');
+        });
     } else {
       setHistory([]);
     }
@@ -91,16 +114,29 @@ export default function AllocationTransferPage() {
     setSuccessMsg('');
 
     try {
-      await allocateAsset(selectedAssetId, assigneeId, expectedReturnDate, user?.id);
+      const payload = {
+        assetId: selectedAssetId,
+        employeeId: assigneeId,
+      };
+      if (expectedReturnDate) {
+        payload.expectedReturnDate = expectedReturnDate;
+      }
+
+      await allocateAsset(payload);
       setSuccessMsg(`Asset successfully allocated to ${employees.find((e) => e.id === assigneeId)?.name}!`);
+      toast.success('Asset allocated successfully');
+      
       // Reload assets list to reflect changed status
       const updatedAssets = await getAssets();
-      setAssets(updatedAssets);
+      setAssets(updatedAssets.map(a => ({ ...a, id: a._id || a.id })));
+      
       // Reload history
       const hist = await getAllocationHistory(selectedAssetId);
-      setHistory(hist);
+      setHistory(mapHistory(hist));
     } catch (err) {
-      setErrorMsg(err.message);
+      const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitLoading(false);
     }
@@ -113,12 +149,21 @@ export default function AllocationTransferPage() {
     setTransferSuccessMsg('');
 
     try {
-      await submitTransferRequest(selectedAssetId, transferToId, transferReason, user?.id);
+      const payload = {
+        assetId: selectedAssetId,
+        toEmployeeId: transferToId,
+        reason: transferReason,
+      };
+
+      await submitTransferRequest(payload);
       setTransferSuccessMsg(`Transfer request submitted successfully. Awaiting approval from department managers.`);
+      toast.success('Transfer request submitted successfully');
       setTransferToId('');
       setTransferReason('');
     } catch (err) {
-      setErrorMsg(err.message);
+      const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitLoading(false);
     }
