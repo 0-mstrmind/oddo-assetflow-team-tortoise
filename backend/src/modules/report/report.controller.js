@@ -3,7 +3,9 @@ import CatchAsync from "../../shared/utils/CatchAsync.js";
 import sendResponse from "../../shared/utils/ApiResponse.js";
 import {
   getUtilizationReportService,
-  getMaintenanceFrequencyService
+  getMaintenanceFrequencyService,
+  getMostUsedAssetsService,
+  getIdleAssetsService
 } from "./report.service.js";
 
 // Retrieve department asset utilization stats
@@ -16,4 +18,16 @@ export const getUtilizationReport = CatchAsync(async (req, res) => {
 export const getMaintenanceFrequencyReport = CatchAsync(async (req, res) => {
   const data = await getMaintenanceFrequencyService();
   sendResponse(res, StatusCodes.OK, "Maintenance frequency report retrieved successfully", { data });
+});
+
+// Retrieve most used assets report
+export const getMostUsedAssets = CatchAsync(async (req, res) => {
+  const data = await getMostUsedAssetsService();
+  sendResponse(res, StatusCodes.OK, "Most used assets report retrieved successfully", { data });
+});
+
+// Retrieve idle assets report
+export const getIdleAssets = CatchAsync(async (req, res) => {
+  const data = await getIdleAssetsService();
+  sendResponse(res, StatusCodes.OK, "Idle assets report retrieved successfully", { data });
 });
