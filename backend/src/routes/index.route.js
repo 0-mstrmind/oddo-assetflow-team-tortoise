@@ -15,6 +15,7 @@ import maintenanceRequestRoute from "../modules/maintenanceRequest/maintenanceRe
 import auditCycleRoute from "../modules/auditCycle/auditCycle.route.js";
 import auditAssignmentRoute from "../modules/auditAssignment/auditAssignment.route.js";
 import auditResultRoute from "../modules/auditResult/auditResult.route.js";
+import resourceRoute from "../modules/resource/resource.route.js";
 
 // instance
 const router = express.Router();
@@ -37,5 +38,6 @@ router.use("/maintenance", maintenanceRequestRoute);
 router.use("/audit-cycles", auditCycleRoute);
 router.use("/audit-assignments", auditAssignmentRoute);
 router.use("/audit-results", auditResultRoute);
+router.use("/resources", resourceRoute);
 
 export default router;
