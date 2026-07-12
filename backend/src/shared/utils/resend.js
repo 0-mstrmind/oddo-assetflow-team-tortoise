@@ -17,7 +17,7 @@ export const sendEmail = async ({ to, subject, html }) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "AssetFlow <noreply@mstrmind.in>",
+        from: process.env.RESEND_SENDER_EMAIL || "AssetFlow <noreply@mstrmind.in>",
         to: [to],
         subject,
         html
