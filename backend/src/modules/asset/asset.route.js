@@ -1,8 +1,8 @@
 import express from "express";
-import { protect } from "../../core/middleware/auth.middleware.js";
-import { validateQuery } from "../../core/middleware/validateRequest.middleware.js";
-import { getAssets } from "./asset.controller.js";
-import { searchAssetQuery } from "./asset.validation.js";
+import { protect, restrictTo } from "../../core/middleware/auth.middleware.js";
+import { validateQuery, validateBody } from "../../core/middleware/validateRequest.middleware.js";
+import { getAssets, createAsset } from "./asset.controller.js";
+import { searchAssetQuery, createAssetInput } from "./asset.validation.js";
 
 const router = express.Router();
 
@@ -11,5 +11,8 @@ router.use(protect);
 
 // Retrieve and search assets directory
 router.get("/", validateQuery(searchAssetQuery), getAssets);
+
+// Register a new asset (restricted to admin)
+router.post("/", restrictTo("admin"), validateBody(createAssetInput), createAsset);
 
 export default router;
