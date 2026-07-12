@@ -56,3 +56,8 @@ export const updateEmployeeRole = async (id, body) => {
   const { data } = await api.patch(`/employees/${id}`, body);
   return data.employee;
 };
+
+export const deleteEmployee = async (id) => {
+  await api.delete(`/employees/${id}`);
+};
+
