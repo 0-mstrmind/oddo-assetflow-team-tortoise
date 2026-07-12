@@ -1,20 +1,23 @@
 import { api } from "../api/axios.js";
 
+// sendResponse spreads data into root: { success, message, ...data }
+// so axios response shape is: response.data.employees (NOT response.data.data.employees)
+
 // ─── Departments ─────────────────────────────────────────────────
 
 export const getDepartments = async () => {
   const { data } = await api.get("/departments");
-  return data.data?.departments || [];
+  return data.departments || [];
 };
 
 export const createDepartment = async (body) => {
   const { data } = await api.post("/departments", body);
-  return data.data?.department;
+  return data.department;
 };
 
 export const updateDepartment = async (id, body) => {
   const { data } = await api.patch(`/departments/${id}`, body);
-  return data.data?.department;
+  return data.department;
 };
 
 export const deleteDepartment = async (id) => {
@@ -25,17 +28,17 @@ export const deleteDepartment = async (id) => {
 
 export const getCategories = async () => {
   const { data } = await api.get("/categories");
-  return data.data?.categories || [];
+  return data.categories || [];
 };
 
 export const createCategory = async (body) => {
   const { data } = await api.post("/categories", body);
-  return data.data?.category;
+  return data.category;
 };
 
 export const updateCategory = async (id, body) => {
   const { data } = await api.patch(`/categories/${id}`, body);
-  return data.data?.category;
+  return data.category;
 };
 
 export const deleteCategory = async (id) => {
@@ -46,10 +49,10 @@ export const deleteCategory = async (id) => {
 
 export const getEmployees = async () => {
   const { data } = await api.get("/employees");
-  return data.data?.employees || [];
+  return data.employees || [];
 };
 
 export const updateEmployeeRole = async (id, body) => {
   const { data } = await api.patch(`/employees/${id}`, body);
-  return data.data?.employee;
+  return data.employee;
 };
