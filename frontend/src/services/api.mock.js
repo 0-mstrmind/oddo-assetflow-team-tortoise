@@ -6,6 +6,9 @@ import { useAuthStore } from '@/store/useAuthStore';
  * Intercepted with a global isDemoMode check to redirect to the live backend API when disabled.
  */
 
+// Dynamic base URL resolver: defaults to port 4000 in dev mode, relative in prod
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:4000' : '');
+
 // Helper to make API calls to backend when demo mode is off
 async function apiRequest(path, options = {}) {
   const token = useAuthStore.getState().token;
@@ -15,7 +18,7 @@ async function apiRequest(path, options = {}) {
     ...options.headers,
   };
 
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(`${API_URL}/api/v1${path}`, {
     ...options,
     headers,
   });
