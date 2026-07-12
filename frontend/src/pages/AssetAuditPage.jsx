@@ -8,12 +8,14 @@ import {
   createAuditCycle,
   startAuditCycle,
 } from '@/services/audit.service';
+import { getAssets } from '@/services/asset.service';
 import {
   ClipboardCheck,
   ShieldAlert,
   AlertTriangle,
   FileSpreadsheet,
   X,
+  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,6 +43,57 @@ export default function AssetAuditPage() {
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
+
+  // Add Audit Record Modal
+  const [isAddRecordOpen, setIsAddRecordOpen] = useState(false);
+  const [isAddingRecord, setIsAddingRecord] = useState(false);
+  const [assetsList, setAssetsList] = useState([]);
+  const [recordForm, setRecordForm] = useState({
+    assetId: '',
+    status: 'verified',
+    condition: '',
+    remarks: '',
+  });
+
+  const openAddRecord = async () => {
+    setRecordForm({ assetId: '', status: 'verified', condition: '', remarks: '' });
+    try {
+      const assets = await getAssets();
+      setAssetsList(assets);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load assets list');
+    }
+    setIsAddRecordOpen(true);
+  };
+
+  const handleAddRecord = async (e) => {
+    e.preventDefault();
+    if (!activeCycle) return;
+    if (!recordForm.assetId) {
+      toast.error('Please select an asset');
+      return;
+    }
+    setIsAddingRecord(true);
+    try {
+      await verifyAuditAsset({
+        auditCycleId: activeCycle.id,
+        assetId: recordForm.assetId,
+        status: recordForm.status,
+        remarks: recordForm.remarks || undefined,
+        ...(recordForm.condition ? { condition: recordForm.condition } : {}),
+      });
+      toast.success('Audit record added successfully');
+      setIsAddRecordOpen(false);
+      fetchAuditData();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
+      toast.error(msg);
+    } finally {
+      setIsAddingRecord(false);
+    }
+  };
 
   const fetchAuditData = async () => {
     setIsLoading(true);
@@ -187,8 +240,19 @@ export default function AssetAuditPage() {
           </p>
         </div>
 
-        {(isAdmin || isAssetManager) && (
-          <div>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Add Audit Record — visible to all authorized roles when cycle is active */}
+          {activeCycle && (
+            <button
+              onClick={openAddRecord}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold rounded-full hover:bg-[#FAF7F5] hover:border-[#D97736] hover:text-[#D97736] transition-all active:scale-[0.98] shadow-sm"
+            >
+              <Plus size={16} />
+              Add Audit Record
+            </button>
+          )}
+          {/* Initiate Cycle — admin/manager only */}
+          {(isAdmin || isAssetManager) && (
             <button
               onClick={() => setIsCreateOpen(true)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all active:scale-[0.98]"
@@ -196,8 +260,8 @@ export default function AssetAuditPage() {
               <ClipboardCheck size={16} />
               Initiate Audit Cycle
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -378,6 +442,127 @@ export default function AssetAuditPage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+         ADD AUDIT RECORD MODAL
+         ───────────────────────────────────────────────────────────── */}
+      {isAddRecordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EBE6] bg-[#FAF7F5]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#D97736]/10 flex items-center justify-center">
+                  <Plus size={15} className="text-[#D97736]" />
+                </div>
+                <h3 className="font-bold text-[#1E2022] text-base">Add Audit Record</h3>
+              </div>
+              <button
+                onClick={() => setIsAddRecordOpen(false)}
+                className="p-1 rounded-md text-[#9CA3AF] hover:bg-[#F4EFEB] hover:text-[#1E2022] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddRecord} className="p-6 space-y-4">
+              {/* Asset Selector */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Asset</label>
+                <select
+                  required
+                  value={recordForm.assetId}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, assetId: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/60 outline-none transition-all"
+                >
+                  <option value="">— Select an asset —</option>
+                  {assetsList.map(asset => (
+                    <option key={asset._id || asset.id} value={asset._id || asset.id}>
+                      {asset.assetTag ? `[${asset.assetTag}] ` : ''}{asset.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Verification Status</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['verified', 'missing', 'damaged', 'misplaced'].map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setRecordForm(prev => ({ ...prev, status: s }))}
+                      className={`h-9 rounded-xl text-xs font-bold capitalize transition-all ${
+                        recordForm.status === s
+                          ? s === 'verified'
+                            ? 'bg-[#1E4620] text-white shadow-sm'
+                            : s === 'missing'
+                            ? 'bg-[#C85C27] text-white shadow-sm'
+                            : s === 'damaged'
+                            ? 'bg-[#D49B28] text-white shadow-sm'
+                            : 'bg-[#6B7280] text-white shadow-sm'
+                          : 'bg-[#FAF7F5] border border-[#E8E2DC] text-[#6B7280] hover:border-[#D97736]/40'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Condition */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Physical Condition</label>
+                <select
+                  value={recordForm.condition}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, condition: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/60 outline-none transition-all"
+                >
+                  <option value="">— Select condition (optional) —</option>
+                  <option value="excellent">✅ Excellent — No visible wear</option>
+                  <option value="good">🟢 Good — Minor cosmetic wear</option>
+                  <option value="fair">🟡 Fair — Functional but noticeable wear</option>
+                  <option value="poor">🟠 Poor — Reduced functionality</option>
+                  <option value="critical">🔴 Critical — Immediate attention needed</option>
+                </select>
+              </div>
+
+              {/* Remarks */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Remarks / Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Found in storage room B, cable missing, serial number verified..."
+                  value={recordForm.remarks}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, remarks: e.target.value }))}
+                  className="w-full px-4 py-3 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/60 outline-none transition-all resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddRecordOpen(false)}
+                  className="flex-1 h-11 rounded-xl border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold hover:bg-[#FAF7F5] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingRecord}
+                  className="flex-1 h-11 rounded-xl bg-[#D97736] text-white text-sm font-semibold hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {isAddingRecord
+                    ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <><Plus size={14} /> Save Record</>}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
