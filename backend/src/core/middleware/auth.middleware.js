@@ -8,8 +8,8 @@ export const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   // Check for token in cookies or Authorization header
-  if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
+  if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
   } else if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.split(" ")[1];
   }
@@ -24,7 +24,7 @@ export const protect = (req, res, next) => {
     return next(new ApiError(StatusCodes.UNAUTHORIZED, "Unauthorized"));
   }
 
-  req.user = decoded;
+  req.user = { ...decoded, userid: decoded.id };
   next();
 };
 
@@ -55,7 +55,7 @@ export const refreshTokenMiddleware = (req, res, next) => {
     return next(new ApiError(StatusCodes.UNAUTHORIZED, "Unauthorized"));
   }
 
-  req.user = decoded;
+  req.user = { ...decoded, userid: decoded.id };
   req.refreshToken = token;
   
   next();

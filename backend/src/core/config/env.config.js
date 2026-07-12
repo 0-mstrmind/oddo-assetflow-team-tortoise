@@ -10,7 +10,7 @@ export const config = {
 
   allowedOrigins: [
     process.env.CLIENT_URL,
-    "http://localhost:5137",
+    "http://localhost:5173",
   ].filter(Boolean),
 
   jwt: {
@@ -25,4 +25,6 @@ export const config = {
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
     max: Number(process.env.RATE_LIMIT_MAX) || 100,
   },
+
+  resendApiKey: process.env.RESEND_API_KEY,
 };

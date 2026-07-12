@@ -7,6 +7,10 @@ import {
   loginUserService,
   logoutService,
   refreshTokenService,
+  getUsersByRoleService,
+  getUsersByDepartmentService,
+  verifyEmailService,
+  createEmployeeService,
 } from "./user.service.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import { setCookie } from "../../shared/utils/Token.js";
@@ -52,7 +56,7 @@ export const loginUser = CatchAsync(async (req, res) => {
 
 // Controller to get user by logged in User ID
 export const getUser = CatchAsync(async (req, res, next) => {
-  const userId = req.user.userid;
+  const userId = req.user.id;
 
   const user = await getUserService(userId);
   if (!user) return next(new ApiError(StatusCodes.NOT_FOUND, "User not found"));
@@ -63,12 +67,12 @@ export const getUser = CatchAsync(async (req, res, next) => {
 // Controller to refresh access token
 export const refreshToken = CatchAsync(async (req, res) => {
   const refreshToken = req.refreshToken;
-  const userId = req.user.userid;
+  const userId = req.user.id;
 
   const { accessToken } = await refreshTokenService(userId, refreshToken);
 
   // Set cookie
-  setCookie(res, "token", accessToken);
+  setCookie(res, "accessToken", accessToken);
 
   sendResponse(res, StatusCodes.OK, "Access token refreshed successfully", {
     accessToken,
@@ -77,12 +81,41 @@ export const refreshToken = CatchAsync(async (req, res) => {
 
 // Controller to logout user
 export const logoutUser = CatchAsync(async (req, res) => {
-  const userId = req.user.userid;
+  const userId = req.user.id;
 
   await logoutService(userId);
 
-  // Clear the cookie
-  res.clearCookie("token");
+  // Clear both cookies
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
 
   sendResponse(res, StatusCodes.OK, "Logout successful");
+});
+
+// Controller to get users by role (for UI dropdowns)
+export const getUsersByRole = CatchAsync(async (req, res) => {
+  const { role } = req.params;
+  const users = await getUsersByRoleService(role);
+  sendResponse(res, StatusCodes.OK, "Users retrieved", { users });
+});
+
+// Controller to get users by department
+export const getUsersByDepartment = CatchAsync(async (req, res) => {
+  const { deptId } = req.params;
+  const users = await getUsersByDepartmentService(deptId);
+  sendResponse(res, StatusCodes.OK, "Users retrieved", { users });
+});
+
+// Controller to verify email
+export const verifyEmail = CatchAsync(async (req, res) => {
+  const { token } = req.params;
+  const result = await verifyEmailService(token);
+  sendResponse(res, StatusCodes.OK, result.message);
+});
+
+// Controller for Admin to create an employee
+export const createEmployee = CatchAsync(async (req, res) => {
+  const { name, email, password, role, departmentId } = req.body;
+  const { user } = await createEmployeeService({ name, email, password, role, departmentId });
+  sendResponse(res, StatusCodes.CREATED, "Employee created successfully", { user });
 });
