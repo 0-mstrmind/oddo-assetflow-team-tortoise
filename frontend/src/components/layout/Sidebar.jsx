@@ -140,19 +140,9 @@ export default function Sidebar({ collapsed, onToggle }) {
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-white/80 truncate">{user?.name || 'User'}</p>
-              <select
-                value={user?.role || ''}
-                onChange={(e) => {
-                  const { setMockRole } = useAuthStore.getState();
-                  setMockRole(e.target.value);
-                }}
-                className="block w-full mt-1 px-1 py-0.5 bg-[#2D3135] border border-white/10 rounded text-[10px] text-white/60 focus:outline-none focus:border-[#D97736]"
-              >
-                <option value="admin">Admin</option>
-                <option value="manager">Asset Manager</option>
-                <option value="department_head">Dept Head</option>
-                <option value="employee">Employee</option>
-              </select>
+              <p className="text-[10px] text-white/30 truncate capitalize">
+                {user?.role === 'manager' ? 'Asset Manager' : user?.role?.replace('_', ' ') || ''}
+              </p>
             </div>
           )}
           {!collapsed && (

@@ -6,6 +6,10 @@ import OrganizationSetupPage from '@/pages/OrganizationSetupPage';
 import AssetDirectoryPage from '@/pages/AssetDirectoryPage';
 import AllocationTransferPage from '@/pages/AllocationTransferPage';
 import ResourceBookingPage from '@/pages/ResourceBookingPage';
+import MaintenanceKanbanPage from '@/pages/MaintenanceKanbanPage';
+import AssetAuditPage from '@/pages/AssetAuditPage';
+import ReportsPage from '@/pages/ReportsPage';
+import NotificationsPage from '@/pages/NotificationsPage';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
@@ -74,13 +78,41 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/maintenance"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head', 'employee']}>
+                <MaintenanceKanbanPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                <AssetAuditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                <ReportsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head', 'employee']}>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Placeholder routes for future screens */}
           <Route path="/bookings/new" element={<PlaceholderPage title="New Booking" />} />
-          <Route path="/maintenance" element={<PlaceholderPage title="Maintenance" />} />
-          <Route path="/audit" element={<PlaceholderPage title="Audit" />} />
-          <Route path="/reports" element={<PlaceholderPage title="Reports" />} />
-          <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />
           <Route path="/requests/new" element={<PlaceholderPage title="Raise Request" />} />
         </Route>
 
