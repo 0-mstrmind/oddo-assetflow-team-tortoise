@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getActivityLogs } from '@/services/api.mock';
+import { getActivityLogs } from '@/services/activity.service';
 import {
   Bell,
   AlertTriangle,
@@ -22,9 +22,57 @@ export default function NotificationsPage() {
 
   const fetchLogs = async () => {
     setIsLoading(true);
-    const data = await getActivityLogs(activeFilter);
-    setLogs(data);
-    setIsLoading(false);
+    try {
+      const rawLogs = await getActivityLogs();
+      
+      const getRelativeTime = (dateString) => {
+        if (!dateString) return 'Just now';
+        const now = new Date();
+        const past = new Date(dateString);
+        const diffMs = now - past;
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} min ago`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      };
+
+      const mappedLogs = rawLogs.map(log => {
+        const desc = (log.description || '').toLowerCase();
+        let category = 'general';
+        let isAlert = false;
+        
+        if (desc.includes('alert') || desc.includes('warn') || desc.includes('fail') || desc.includes('overdue')) {
+          category = 'alerts';
+          isAlert = true;
+        } else if (desc.includes('transfer') || desc.includes('approve') || desc.includes('reject')) {
+          category = 'approvals';
+        } else if (desc.includes('book') || desc.includes('reservation')) {
+          category = 'bookings';
+        }
+
+        return {
+          id: log._id || log.id,
+          text: log.description || `${log.action} ${log.entity}`,
+          category,
+          isAlert,
+          relativeTime: getRelativeTime(log.createdAt),
+        };
+      });
+
+      const filtered = mappedLogs.filter(log => {
+        if (activeFilter === 'all') return true;
+        return log.category === activeFilter;
+      });
+
+      setLogs(filtered);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

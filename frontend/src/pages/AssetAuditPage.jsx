@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import {
-  getActiveAuditCycle,
-  getAuditAssets,
+  getAuditCycles,
+  getAuditChecklist,
   verifyAuditAsset,
   closeAuditCycle,
-} from '@/services/api.mock';
+} from '@/services/audit.service';
 import {
   ClipboardCheck,
   ShieldAlert,
-  CheckCircle,
-  XCircle,
   AlertTriangle,
   FileSpreadsheet,
   X,
+  Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AssetAuditPage() {
   const user = useAuthStore(s => s.user);
@@ -33,14 +33,27 @@ export default function AssetAuditPage() {
   const fetchAuditData = async () => {
     setIsLoading(true);
     try {
-      const [cycle, list] = await Promise.all([
-        getActiveAuditCycle(),
-        getAuditAssets(),
-      ]);
-      setActiveCycle(cycle);
-      setAuditAssets(list);
+      const cycles = await getAuditCycles();
+      const active = cycles.find(c => c.status === 'in-progress');
+      if (active) {
+        const activeWithId = { ...active, id: active._id || active.id };
+        setActiveCycle(activeWithId);
+        const checklistData = await getAuditChecklist(activeWithId.id);
+        const list = (checklistData.checklist || []).map(item => ({
+          id: item.asset._id || item.asset.id,
+          assetTag: item.asset.assetTag,
+          name: item.asset.name,
+          expectedLocation: item.asset.location || 'HQ',
+          status: item.auditResult?.status || 'pending',
+        }));
+        setAuditAssets(list);
+      } else {
+        setActiveCycle(null);
+        setAuditAssets([]);
+      }
     } catch (e) {
       console.error(e);
+      toast.error('Failed to load audit data');
     } finally {
       setIsLoading(false);
     }
@@ -73,24 +86,50 @@ export default function AssetAuditPage() {
     );
   }
 
-  const handleVerify = async (id, status) => {
+  const handleVerify = async (assetId, status) => {
+    if (!activeCycle) return;
     try {
       // Optimistic update
-      setAuditAssets(prev => prev.map(a => (a.id === id ? { ...a, status } : a)));
-      await verifyAuditAsset(id, status);
+      setAuditAssets(prev => prev.map(a => (a.id === assetId ? { ...a, status } : a)));
+      await verifyAuditAsset({
+        auditCycleId: activeCycle.id,
+        assetId,
+        status,
+      });
+      toast.success('Verification status updated');
     } catch (err) {
       console.error(err);
+      toast.error('Failed to update verification status');
       fetchAuditData();
     }
   };
 
   const handleCloseAudit = async () => {
+    if (!activeCycle) return;
     try {
-      const summary = await closeAuditCycle();
+      await closeAuditCycle(activeCycle.id);
+      toast.success('Audit cycle closed successfully');
+
+      const total = auditAssets.length;
+      const verified = auditAssets.filter(a => a.status === 'verified').length;
+      const missing = auditAssets.filter(a => a.status === 'missing').length;
+      const damaged = auditAssets.filter(a => a.status === 'damaged').length;
+      const pending = auditAssets.filter(a => a.status === 'pending').length;
+      const discrepancies = auditAssets.filter(a => a.status === 'missing' || a.status === 'damaged');
+
+      const summary = {
+        cycleName: activeCycle.name,
+        closedAt: new Date().toISOString().split('T')[0],
+        stats: { total, verified, missing, damaged, pending },
+        discrepancies,
+      };
+
       setSummaryReport(summary);
       setIsSummaryOpen(true);
+      fetchAuditData();
     } catch (err) {
       console.error(err);
+      toast.error('Failed to close audit cycle');
     }
   };
 
@@ -106,16 +145,25 @@ export default function AssetAuditPage() {
         </p>
       </div>
 
-      {isLoading || !activeCycle ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-[50vh] bg-white rounded-2xl border border-[#F0EBE6] shadow-sm">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-[#E8E2DC] border-t-[#D97736] rounded-full animate-spin" />
             <p className="text-sm text-[#9CA3AF]">Loading active audit cycle...</p>
           </div>
         </div>
+      ) : !activeCycle ? (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] bg-white rounded-2xl border border-[#F0EBE6] p-8 text-center shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-[#FAF7F5] border border-[#E8E2DC] flex items-center justify-center text-[#D97736] mb-4">
+            <ClipboardCheck size={22} />
+          </div>
+          <h3 className="text-lg font-bold text-[#1E2022]">No Active Audit Cycle</h3>
+          <p className="text-sm text-[#9CA3AF] max-w-sm mt-1 mb-6 leading-relaxed">
+            There are no asset audit cycles currently in progress. Active audits will appear here for verification.
+          </p>
+        </div>
       ) : (
         <div className="space-y-6">
-          
           {/* Active Cycle Top Info Card */}
           <div className="bg-white rounded-2xl p-6 border border-[#F0EBE6] shadow-[0_1px_4px_rgba(30,32,34,0.03)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
@@ -125,7 +173,9 @@ export default function AssetAuditPage() {
               <div>
                 <p className="text-xs font-bold text-[#9CA3AF] uppercase">Active Audit Cycle</p>
                 <h3 className="text-lg font-bold text-[#1E2022] mt-0.5">{activeCycle.name}</h3>
-                <p className="text-xs text-[#6B7280]">Targeting Department: <span className="font-semibold">{activeCycle.department}</span></p>
+                <p className="text-xs text-[#6B7280]">
+                  Targeting: <span className="font-semibold">{activeCycle.scope || 'All Locations'}</span>
+                </p>
               </div>
             </div>
 
@@ -287,7 +337,7 @@ export default function AssetAuditPage() {
                   onClick={() => setIsSummaryOpen(false)}
                   className="w-full h-11 rounded-xl bg-[#1E2022] text-white text-sm font-semibold hover:bg-[#2D3135] transition-colors"
                 >
-                  Download Detailed Audit PDF
+                  Close Summary Report
                 </button>
               </div>
             </div>

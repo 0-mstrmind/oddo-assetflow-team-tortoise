@@ -4,16 +4,15 @@ import {
   getResources,
   getBookings,
   createBooking,
-} from '@/services/api.mock';
+} from '@/services/booking.service';
 import {
   CalendarClock,
   Clock,
   CheckCircle,
   AlertTriangle,
-  User,
   Calendar as CalendarIcon,
-  HelpCircle,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const HOURS = [
   { label: '9:00 AM', time: '09:00' },
@@ -49,10 +48,19 @@ export default function ResourceBookingPage() {
 
   useEffect(() => {
     getResources().then((resList) => {
-      setResources(resList);
-      if (resList.length > 0) {
-        setSelectedResId(resList[0].id);
+      const mappedResList = resList.map(r => ({
+        id: r._id || r.id,
+        name: r.name,
+        type: r.type,
+      }));
+      setResources(mappedResList);
+      if (mappedResList.length > 0) {
+        setSelectedResId(mappedResList[0].id);
       }
+      setIsLoading(false);
+    }).catch(err => {
+      console.error(err);
+      toast.error('Failed to load resources');
       setIsLoading(false);
     });
   }, []);
@@ -65,7 +73,22 @@ export default function ResourceBookingPage() {
     setConflictHours([]);
     try {
       const bList = await getBookings(selectedResId, selectedDate);
-      setBookings(bList);
+      const mapped = bList.map(b => {
+        const start = new Date(b.startTime);
+        const end = new Date(b.endTime);
+        const formatTime = (d) => {
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          return `${hh}:${mm}`;
+        };
+        return {
+          id: b._id || b.id,
+          bookedByName: b.bookedBy?.name || 'Reserved User',
+          startTime: formatTime(start),
+          endTime: formatTime(end),
+        };
+      });
+      setBookings(mapped);
     } catch (e) {
       console.error(e);
     }
@@ -84,19 +107,24 @@ export default function ResourceBookingPage() {
     setConflictHours([]);
 
     try {
+      const startIso = new Date(`${selectedDate}T${startTime}:00`).toISOString();
+      const endIso = new Date(`${selectedDate}T${endTime}:00`).toISOString();
+
       await createBooking({
         resourceId: selectedResId,
-        date: selectedDate,
-        startTime,
-        endTime,
-        bookedBy: user?.id || 'usr_001',
+        startTime: startIso,
+        endTime: endIso,
       });
+
+      toast.success('Successfully booked! Time slot confirmed.');
       setSuccessMsg(`Successfully booked! Time slot confirmed.`);
       setStartTime('');
       setEndTime('');
       fetchBookingsList();
     } catch (err) {
-      setErrorMsg(err.message);
+      const errorMsgText = err.response?.data?.message || err.message || 'Overlap conflict detected';
+      setErrorMsg(errorMsgText);
+      toast.error(errorMsgText);
       // Highlight the conflict hours
       setConflictHours([startTime, endTime]);
     } finally {
@@ -258,7 +286,7 @@ export default function ResourceBookingPage() {
                   <p className="text-sm font-bold text-[#1E2022] mt-0.5">
                     {resources.find(r => r.id === selectedResId)?.name || 'None'}
                   </p>
-                  <p className="text-xs text-[#6B7280]">{selectedDate}</p>
+                  <p className="text-xs text-[#6B7280]">Date: {selectedDate}</p>
                 </div>
 
                 {/* Overlap Error UI */}

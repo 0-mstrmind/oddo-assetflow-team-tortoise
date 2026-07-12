@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
+import { getAssets } from '@/services/asset.service';
+import { getEmployees } from '@/services/organization.service';
 import {
-  getAssets,
-  getEmployees,
   getAllocationHistory,
   allocateAsset,
   submitTransferRequest,
-} from '@/services/api.mock';
+} from '@/services/allocation.service';
 import {
   ArrowRightLeft,
   User,

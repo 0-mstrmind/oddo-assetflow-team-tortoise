@@ -5,7 +5,6 @@ import {
   CalendarClock, Wrench, ClipboardCheck, BarChart3,
   Bell, LogOut, ChevronLeft, ChevronRight,
 } from 'lucide-react';
-import { getNavigationItems } from '@/services/api.mock';
 import { useAuthStore } from '@/store/auth.store';
 import { useLogout } from '@/hooks/useAuth';
 
@@ -21,6 +20,18 @@ const ICON_MAP = {
   'bell': Bell,
 };
 
+const NAVIGATION_ITEMS = [
+  { id: 'dashboard',      label: 'Dashboard',             icon: 'layout-dashboard', href: '/dashboard' },
+  { id: 'organization',   label: 'Organization Setup',    icon: 'building-2',       href: '/organization' },
+  { id: 'assets',         label: 'Assets',                icon: 'package',          href: '/assets' },
+  { id: 'allocation',     label: 'Allocation & Transfer', icon: 'arrow-right-left', href: '/allocations' },
+  { id: 'booking',        label: 'Resource Booking',      icon: 'calendar-clock',   href: '/bookings' },
+  { id: 'maintenance',    label: 'Maintenance',           icon: 'wrench',           href: '/maintenance' },
+  { id: 'audit',          label: 'Audit',                 icon: 'clipboard-check',  href: '/audit' },
+  { id: 'reports',        label: 'Reports',               icon: 'bar-chart-3',      href: '/reports' },
+  { id: 'notifications',  label: 'Notifications',         icon: 'bell',             href: '/notifications', badge: 3 },
+];
+
 const ROLE_RULES = {
   dashboard: ['admin', 'manager', 'department_head', 'employee', 'auditor', 'technician'],
   organization: ['admin'],
@@ -34,17 +45,12 @@ const ROLE_RULES = {
 };
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const [navItems, setNavItems] = useState([]);
   const location = useLocation();
   const user = useAuthStore(s => s.user);
   const { mutate: signOut } = useLogout();
 
-  useEffect(() => {
-    getNavigationItems().then(setNavItems);
-  }, []);
-
   // Filter items by current user's role
-  const visibleItems = navItems.filter((item) => {
+  const visibleItems = NAVIGATION_ITEMS.filter((item) => {
     const allowed = ROLE_RULES[item.id];
     if (!allowed) return true; // Default allow if not configured
     return user && allowed.includes(user.role);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { getAssets, getDepartments } from '@/services/api.mock';
+import { getAssets } from '@/services/asset.service';
+import { getDepartments } from '@/services/organization.service';
 import {
   BarChart3,
   TrendingUp,

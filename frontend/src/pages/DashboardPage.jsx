@@ -2,21 +2,12 @@ import { useState, useEffect } from 'react';
 import {
   Package, Users, CalendarCheck, ArrowRightLeft, RotateCcw,
   AlertTriangle, X, TrendingUp, TrendingDown, Minus,
-  Plus, CalendarClock, MessageSquarePlus,
-  Laptop, Undo2, Calendar, Wrench, PlusCircle, ClipboardCheck,
+  CalendarClock, Laptop, Undo2, Calendar, Wrench, PlusCircle, ClipboardCheck,
   ArrowRight, ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { useAppStore } from '@/store/useAppStore';
-import {
-  getDashboardAlerts,
-  getQuickActions,
-  getDashboardKPIs,
-  getRecentActivity,
-} from '@/services/api.mock';
 import { getDashboardData } from '@/services/dashboard.service';
 import { toast } from 'sonner';
-
 
 // ─── Icon Map for Activity Feed ──────────────────────────────────
 const ACTIVITY_ICON_MAP = {
@@ -52,7 +43,6 @@ function KPICard({ label, count, trend, trendDirection, icon: Icon, accentColor 
     <div className="group relative bg-white rounded-2xl p-5 md:p-6 transition-all duration-300 hover:-translate-y-0.5"
       style={{ boxShadow: '0 1px 4px rgba(30,32,34,0.03), 0 4px 16px rgba(30,32,34,0.025)' }}
     >
-      {/* Hover shadow upgrade */}
       <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
         style={{ boxShadow: '0 6px 24px rgba(30,32,34,0.06)' }}
       />
@@ -167,13 +157,8 @@ function ActivityItem({ activity, isLast }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  DASHBOARD PAGE
-// ═══════════════════════════════════════════════════════════════════
-
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const { isDemoMode, toggleDemoMode } = useAppStore();
   
   const [kpis, setKpis] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -181,34 +166,40 @@ export default function DashboardPage() {
   const [quickActions, setQuickActions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const getClientQuickActions = (role) => {
+    const actions = [];
+    if (role === 'admin' || role === 'manager') {
+      actions.push({
+        id: 'register',
+        label: '+ Register Asset',
+        href: '/assets?register=true',
+        variant: 'primary',
+      });
+    }
+    actions.push({
+      id: 'book',
+      label: 'Book Resource',
+      href: '/bookings',
+      variant: 'secondary',
+    });
+    actions.push({
+      id: 'request',
+      label: 'Raise Request',
+      href: '/allocations',
+      variant: 'secondary',
+    });
+    return actions;
+  };
+
   useEffect(() => {
     async function fetchDashboardData() {
       setIsLoading(true);
       try {
-        if (isDemoMode) {
-          const [mockKpis, mockActivities, alertData, actionData] = await Promise.all([
-            getDashboardKPIs(),
-            getRecentActivity(),
-            getDashboardAlerts(),
-            getQuickActions(user?.role),
-          ]);
-          setKpis(mockKpis);
-          setActivity(mockActivities);
-          setAlerts(alertData);
-          setQuickActions(actionData);
-          return;
-        }
-
-        const [dashboardBackend, alertData, actionData] = await Promise.all([
-          getDashboardData(),
-          getDashboardAlerts(),
-          getQuickActions(user?.role),
-        ]);
-
+        const dashboardBackend = await getDashboardData();
         const metricsData = dashboardBackend?.metrics || {};
         const backendActivities = dashboardBackend?.recentActivities || [];
 
-        // Map KPI metrics — default every field to 0 if backend returns null/undefined
+        // Map KPI metrics
         setKpis({
           available: { count: (metricsData.availableAssets || 0) + (metricsData.availableResources || 0), trend: '', trendDirection: 'neutral' },
           allocated: { count: metricsData.allocatedAssets || 0, trend: '', trendDirection: 'neutral' },
@@ -217,10 +208,10 @@ export default function DashboardPage() {
           upcomingReturns: { count: metricsData.upcomingReturns || 0, trend: '', trendDirection: 'neutral' },
         });
 
-        // Set alerts, merging dynamic overdue alert if exists
-        const alertList = [...alertData];
+        // Set alerts dynamically from overdue returns
+        const alertList = [];
         if (metricsData.overdueReturns > 0) {
-          alertList.unshift({
+          alertList.push({
             id: 'alert_overdue',
             type: 'overdue',
             severity: 'warning',
@@ -233,8 +224,8 @@ export default function DashboardPage() {
         setAlerts(alertList);
 
         // Map Activities
-        const mappedActivities = backendActivities.map(activity => {
-          const desc = (activity.description || '').toLowerCase();
+        const mappedActivities = backendActivities.map(act => {
+          const desc = (act.description || '').toLowerCase();
           let type = 'allocation';
           let icon = 'laptop';
           
@@ -255,7 +246,6 @@ export default function DashboardPage() {
             icon = 'arrow-right-left';
           }
 
-          // Simple relative time conversion
           const getRelativeTime = (dateString) => {
             if (!dateString) return 'Just now';
             const now = new Date();
@@ -271,52 +261,41 @@ export default function DashboardPage() {
           };
 
           return {
-            id: activity._id || activity.id,
+            id: act._id || act.id,
             type,
             icon,
-            description: activity.description,
-            actor: activity.userId?.name || activity.actor || 'System',
-            relativeTime: activity.createdAt ? getRelativeTime(activity.createdAt) : 'Just now'
+            description: act.description,
+            actor: act.userId?.name || act.actor || 'System',
+            relativeTime: act.createdAt ? getRelativeTime(act.createdAt) : 'Just now'
           };
         });
 
         setActivity(mappedActivities);
-        setQuickActions(actionData);
+        setQuickActions(getClientQuickActions(user?.role));
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
-        toast.error("Failed to load live dashboard data. Using local demo/mock workspace.");
-        try {
-          const [mockKpis, mockActivities, alertData, actionData] = await Promise.all([
-            getDashboardKPIs(),
-            getRecentActivity(),
-            getDashboardAlerts(),
-            getQuickActions(user?.role),
-          ]);
-          setKpis(mockKpis);
-          setActivity(mockActivities);
-          setAlerts(alertData);
-          setQuickActions(actionData);
-        } catch (e) {
-          setKpis({
-            available: { count: 0, trend: '', trendDirection: 'neutral' },
-            allocated: { count: 0, trend: '', trendDirection: 'neutral' },
-            activeBookings: { count: 0, trend: '', trendDirection: 'neutral' },
-            pendingTransfers: { count: 0, trend: '', trendDirection: 'neutral' },
-            upcomingReturns: { count: 0, trend: '', trendDirection: 'neutral' },
-          });
-        }
+        toast.error("Failed to load live dashboard data. Using local placeholder metrics.");
+        setKpis({
+          available: { count: 0, trend: '', trendDirection: 'neutral' },
+          allocated: { count: 0, trend: '', trendDirection: 'neutral' },
+          activeBookings: { count: 0, trend: '', trendDirection: 'neutral' },
+          pendingTransfers: { count: 0, trend: '', trendDirection: 'neutral' },
+          upcomingReturns: { count: 0, trend: '', trendDirection: 'neutral' },
+        });
+        setQuickActions(getClientQuickActions(user?.role));
+        setActivity([]);
+        setAlerts([]);
       } finally {
         setIsLoading(false);
       }
     }
     fetchDashboardData();
-  }, [user?.role, isDemoMode]);
+  }, [user?.role]);
 
   const dismissAlert = (id) => {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // Greeting based on time
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -351,19 +330,6 @@ export default function DashboardPage() {
             Today's Overview
           </h1>
         </div>
-
-        {/* Demo Mode Toggle Switch */}
-        <button
-          onClick={toggleDemoMode}
-          className={`h-9 px-4.5 rounded-full text-xs font-semibold border flex items-center gap-2 transition-all active:scale-[0.98] ${
-            isDemoMode
-              ? 'bg-[#1E4620]/[0.06] border-[#1E4620]/15 text-[#1E4620]'
-              : 'border-[#E8E2DC] text-[#1E2022] hover:bg-[#FAF7F5] bg-white'
-          }`}
-        >
-          <span className={`w-2 h-2 rounded-full ${isDemoMode ? 'bg-[#1E4620] animate-pulse' : 'bg-gray-400'}`} />
-          {isDemoMode ? 'Demo Data: ON' : 'Load Demo Data'}
-        </button>
       </div>
 
       {/* ── Alert Banners ── */}

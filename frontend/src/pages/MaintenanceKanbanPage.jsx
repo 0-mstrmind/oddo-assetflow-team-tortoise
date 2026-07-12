@@ -5,7 +5,7 @@ import {
   getMaintenanceRequests,
   addMaintenanceRequest,
   updateMaintenanceStatus,
-} from '@/services/api.mock';
+} from '@/services/maintenance.service';
 import {
   Plus,
   X,

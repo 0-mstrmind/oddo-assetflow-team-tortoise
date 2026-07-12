@@ -75,9 +75,24 @@ export const createAssetService = async (data) => {
     }
   }
 
+  let serialNumber = data.serialNumber;
+  if (!serialNumber || serialNumber.trim() === "") {
+    let isUnique = false;
+    while (!isUnique) {
+      const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const timestampPart = Date.now().toString().slice(-4);
+      serialNumber = `SN-${timestampPart}-${randomPart}`;
+      const existing = await Asset.findOne({ serialNumber });
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+  }
+
   const asset = await Asset.create({
     ...data,
     assetTag,
+    serialNumber,
     qrCode
   });
 
