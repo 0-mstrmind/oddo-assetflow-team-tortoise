@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema({
     },
     companyName: {
         type: String,
-        required: function() { return this.role === 'admin'; },
+        required: function() { return this.role === 'admin' && this.isNew; },
     },
     password: {
         type: String,

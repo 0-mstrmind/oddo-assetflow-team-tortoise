@@ -101,7 +101,7 @@ export default function LoginPage() {
               }`}
             >
               <UserPlus size={14} />
-              Initialize Workspace
+              Initialize Company
             </button>
           </div>
 
@@ -144,7 +144,7 @@ export default function LoginPage() {
             {/* Email */}
             <div className="space-y-1.5">
               <label htmlFor="email" className="block text-[13px] font-medium text-[#6B7280]">
-                Email Address
+                {mode === 'register' ? 'Admin Email Address' : 'Email Address'}
               </label>
               <input
                 id="email"
