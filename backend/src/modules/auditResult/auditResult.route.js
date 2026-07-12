@@ -7,8 +7,8 @@ import * as validation from "./auditResult.validation.js";
 const router = express.Router();
 router.use(protect);
 
-// Auditors (and admins) can mark results
-router.post("/", validateBody(validation.markResultSchema), controller.markResult);
+// Auditors (and admins/managers) can mark results
+router.post("/", restrictTo("admin", "manager", "auditor"), validateBody(validation.markResultSchema), controller.markResult);
 
 // Discrepancy reports and full results
 router.use(restrictTo("admin", "manager", "auditor"));

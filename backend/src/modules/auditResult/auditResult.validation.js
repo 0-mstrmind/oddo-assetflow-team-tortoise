@@ -7,4 +7,5 @@ export const markResultSchema = Joi.object({
     assetId: objectIdValidator.required(),
     status: Joi.string().valid('verified', 'missing', 'damaged', 'misplaced').required(),
     remarks: Joi.string().trim().max(500).optional(),
+    condition: Joi.string().trim().max(300).optional(),
 });

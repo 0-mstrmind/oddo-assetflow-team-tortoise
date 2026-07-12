@@ -4,8 +4,8 @@ import CatchAsync from "../../shared/utils/CatchAsync.js";
 import * as auditResultService from "./auditResult.service.js";
 
 export const markResult = CatchAsync(async (req, res) => {
-    const { auditCycleId, assetId, status, remarks } = req.body;
-    const result = await auditResultService.markAssetResult(auditCycleId, assetId, status, remarks);
+    const { auditCycleId, assetId, status, remarks, condition } = req.body;
+    const result = await auditResultService.markAssetResult(auditCycleId, assetId, status, remarks, condition);
     sendResponse(res, StatusCodes.OK, "Asset audit result marked", { result });
 });
 

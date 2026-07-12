@@ -58,6 +58,7 @@ export default function AssetAuditPage() {
           expectedLocation: item.asset.location || 'HQ',
           status: item.auditResult?.status || 'pending',
           remarks: item.auditResult?.remarks || '',
+          condition: item.auditResult?.condition || '',
         }));
         setAuditAssets(list);
       } else {
@@ -99,7 +100,7 @@ export default function AssetAuditPage() {
     );
   }
 
-  const handleVerify = async (assetId, status, remarks = '') => {
+  const handleVerify = async (assetId, status, remarks = '', condition = '') => {
     if (!activeCycle) return;
     try {
       await verifyAuditAsset({
@@ -107,6 +108,7 @@ export default function AssetAuditPage() {
         assetId,
         status,
         remarks,
+        ...(condition ? { condition } : {}),
       });
       toast.success('Verification claim submitted successfully');
     } catch (err) {
@@ -254,14 +256,15 @@ export default function AssetAuditPage() {
                   <tr className="bg-[#FAF7F5]/80 border-b border-[#F0EBE6] text-xs font-bold text-[#6B7280] uppercase tracking-wider">
                     <th className="py-4 px-6">Asset Tag & Name</th>
                     <th className="py-4 px-6">Expected Location</th>
-                    <th className="py-4 px-6">Remarks / Condition</th>
+                    <th className="py-4 px-6">Remarks</th>
+                    <th className="py-4 px-6">Condition</th>
                     <th className="py-4 px-6">Verification Claims</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0EBE6] text-sm text-[#1E2022]">
                   {auditAssets.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="py-12 px-6 text-center text-sm text-[#9CA3AF] font-medium">
+                      <td colSpan="5" className="py-12 px-6 text-center text-sm text-[#9CA3AF] font-medium">
                         No assets in this audit cycle.
                       </td>
                     </tr>
@@ -280,15 +283,33 @@ export default function AssetAuditPage() {
                         <td className="py-4 px-6">
                           <input
                             type="text"
-                            placeholder="e.g. Minor scratches, Good condition"
+                            placeholder="e.g. Notes or observations"
                             value={asset.remarks || ''}
                             onChange={(e) => {
                               const val = e.target.value;
                               setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, remarks: val } : a)));
                             }}
-                            onBlur={() => handleVerify(asset.id, asset.status, asset.remarks)}
+                            onBlur={() => handleVerify(asset.id, asset.status, asset.remarks, asset.condition)}
                             className="w-full h-10 px-3 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-xs text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736] outline-none transition-all"
                           />
+                        </td>
+                        <td className="py-4 px-6">
+                          <select
+                            value={asset.condition || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, condition: val } : a)));
+                              handleVerify(asset.id, asset.status, asset.remarks, val);
+                            }}
+                            className="w-full h-10 px-3 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-xs text-[#1E2022] focus:border-[#D97736] outline-none transition-all"
+                          >
+                            <option value="">Select condition</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                            <option value="critical">Critical</option>
+                          </select>
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-2">
@@ -296,7 +317,7 @@ export default function AssetAuditPage() {
                             <button
                               onClick={() => {
                                 setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, status: 'verified' } : a)));
-                                handleVerify(asset.id, 'verified', asset.remarks);
+                                handleVerify(asset.id, 'verified', asset.remarks, asset.condition);
                               }}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                 asset.status === 'verified'
@@ -311,7 +332,7 @@ export default function AssetAuditPage() {
                             <button
                               onClick={() => {
                                 setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, status: 'missing' } : a)));
-                                handleVerify(asset.id, 'missing', asset.remarks);
+                                handleVerify(asset.id, 'missing', asset.remarks, asset.condition);
                               }}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                 asset.status === 'missing'
@@ -326,7 +347,7 @@ export default function AssetAuditPage() {
                             <button
                               onClick={() => {
                                 setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, status: 'damaged' } : a)));
-                                handleVerify(asset.id, 'damaged', asset.remarks);
+                                handleVerify(asset.id, 'damaged', asset.remarks, asset.condition);
                               }}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                                 asset.status === 'damaged'

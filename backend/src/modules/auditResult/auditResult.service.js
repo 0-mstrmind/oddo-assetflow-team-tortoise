@@ -3,15 +3,19 @@ import AuditCycle from "../auditCycle/auditCycle.model.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 
-export const markAssetResult = async (auditCycleId, assetId, status, remarks) => {
+export const markAssetResult = async (auditCycleId, assetId, status, remarks, condition) => {
     const cycle = await AuditCycle.findById(auditCycleId);
     if (!cycle || cycle.status === 'completed') {
         throw new ApiError(StatusCodes.BAD_REQUEST, "Audit cycle not found or already closed");
     }
 
+    const updateFields = { status };
+    if (remarks !== undefined) updateFields.remarks = remarks;
+    if (condition !== undefined) updateFields.condition = condition;
+
     const result = await AuditResult.findOneAndUpdate(
         { auditCycleId, assetId },
-        { status, remarks },
+        updateFields,
         { new: true, upsert: true }
     );
     return result;
