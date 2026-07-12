@@ -1,8 +1,22 @@
 import ActivityLog from "./activityLog.model.js";
+import { getIO } from "../../core/socket/socket.config.js";
 
-// Optional centralized helper to create a log (though other controllers currently implement it manually)
+// Centralized helper to create a log and broadcast it
 export const createActivityLogService = async (data) => {
-    return await ActivityLog.create(data);
+    const log = await ActivityLog.create(data);
+    
+    // Populate the newly created log before broadcasting
+    const populatedLog = await ActivityLog.findById(log._id)
+        .populate("userId", "name email role");
+        
+    try {
+        const io = getIO();
+        io.emit("NEW_ACTIVITY", populatedLog);
+    } catch (error) {
+        console.error("Socket emit failed:", error.message);
+    }
+    
+    return populatedLog;
 };
 
 export const getActivityLogsService = async (query = {}) => {

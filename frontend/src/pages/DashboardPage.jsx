@@ -157,6 +157,53 @@ function ActivityItem({ activity, isLast }) {
   );
 }
 
+// Helper to map backend activity logs to UI format
+const mapActivity = (act) => {
+  const desc = (act.description || '').toLowerCase();
+  let type = 'allocation';
+  let icon = 'laptop';
+  
+  if (desc.includes('return') || desc.includes('undone')) {
+    type = 'return';
+    icon = 'undo';
+  } else if (desc.includes('book') || desc.includes('calendar')) {
+    type = 'booking';
+    icon = 'calendar';
+  } else if (desc.includes('maintenance') || desc.includes('repair')) {
+    type = 'maintenance';
+    icon = 'wrench';
+  } else if (desc.includes('register') || desc.includes('create')) {
+    type = 'registration';
+    icon = 'plus-circle';
+  } else if (desc.includes('transfer')) {
+    type = 'transfer';
+    icon = 'arrow-right-left';
+  }
+
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return 'Just now';
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffMs = now - past;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  };
+
+  return {
+    id: act._id || act.id,
+    type,
+    icon,
+    description: act.description,
+    actor: act.userId?.name || act.actor || 'System',
+    relativeTime: act.createdAt ? getRelativeTime(act.createdAt) : 'Just now'
+  };
+};
+
 export default function DashboardPage() {
   const { user } = useAuthStore();
   
@@ -192,6 +239,24 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    import('@/services/socket.service').then(({ socketService }) => {
+      const handleNewActivity = (newLog) => {
+        setActivity((prev) => {
+          const mapped = mapActivity(newLog);
+          // Prepend new activity and keep top 10
+          return [mapped, ...prev].slice(0, 10);
+        });
+      };
+      
+      socketService.on("NEW_ACTIVITY", handleNewActivity);
+      
+      return () => {
+        socketService.off("NEW_ACTIVITY", handleNewActivity);
+      };
+    }).catch(console.error);
+  }, []);
+
+  useEffect(() => {
     async function fetchDashboardData() {
       setIsLoading(true);
       try {
@@ -224,51 +289,7 @@ export default function DashboardPage() {
         setAlerts(alertList);
 
         // Map Activities
-        const mappedActivities = backendActivities.map(act => {
-          const desc = (act.description || '').toLowerCase();
-          let type = 'allocation';
-          let icon = 'laptop';
-          
-          if (desc.includes('return') || desc.includes('undone')) {
-            type = 'return';
-            icon = 'undo';
-          } else if (desc.includes('book') || desc.includes('calendar')) {
-            type = 'booking';
-            icon = 'calendar';
-          } else if (desc.includes('maintenance') || desc.includes('repair')) {
-            type = 'maintenance';
-            icon = 'wrench';
-          } else if (desc.includes('register') || desc.includes('create')) {
-            type = 'registration';
-            icon = 'plus-circle';
-          } else if (desc.includes('transfer')) {
-            type = 'transfer';
-            icon = 'arrow-right-left';
-          }
-
-          const getRelativeTime = (dateString) => {
-            if (!dateString) return 'Just now';
-            const now = new Date();
-            const past = new Date(dateString);
-            const diffMs = now - past;
-            const diffMins = Math.floor(diffMs / (1000 * 60));
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins} min ago`;
-            const diffHours = Math.floor(diffMins / 60);
-            if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
-            const diffDays = Math.floor(diffHours / 24);
-            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-          };
-
-          return {
-            id: act._id || act.id,
-            type,
-            icon,
-            description: act.description,
-            actor: act.userId?.name || act.actor || 'System',
-            relativeTime: act.createdAt ? getRelativeTime(act.createdAt) : 'Just now'
-          };
-        });
+        const mappedActivities = backendActivities.map(mapActivity);
 
         setActivity(mappedActivities);
         setQuickActions(getClientQuickActions(user?.role));
