@@ -54,3 +54,11 @@ export const getAllMaintenanceRequestsService = async (query = {}) => {
         .populate('approvedBy', 'name email')
         .populate('technicianId', 'name email');
 };
+
+export const getRequestsByStatusService = async (status) => {
+    return await MaintenanceRequest.find({ status })
+        .populate('assetId')
+        .populate('requestedBy', 'name email')
+        .populate('approvedBy', 'name email')
+        .populate('technicianId', 'name email');
+};

@@ -29,3 +29,9 @@ export const getAllRequests = CatchAsync(async (req, res) => {
     const requests = await maintenanceService.getAllMaintenanceRequestsService(req.query);
     sendResponse(res, StatusCodes.OK, "All maintenance requests retrieved", { requests });
 });
+
+export const getRequestsByStatus = CatchAsync(async (req, res) => {
+    const { status } = req.params;
+    const requests = await maintenanceService.getRequestsByStatusService(status);
+    sendResponse(res, StatusCodes.OK, `Maintenance requests retrieved for status: ${status}`, { requests });
+});
