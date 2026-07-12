@@ -18,6 +18,9 @@ const activityLogSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
     },
+    description: {
+        type: String,
+    },
 }, {
     timestamps: true,
 });
