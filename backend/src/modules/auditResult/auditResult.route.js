@@ -11,7 +11,7 @@ router.use(protect);
 router.post("/", validateBody(validation.markResultSchema), controller.markResult);
 
 // Discrepancy reports and full results
-router.use(restrictTo("Admin", "Asset Manager"));
+router.use(restrictTo("admin", "manager", "auditor"));
 router.get("/cycle/:cycleId/discrepancies", controller.getDiscrepancies);
 router.get("/cycle/:cycleId", controller.getAllResults);
 

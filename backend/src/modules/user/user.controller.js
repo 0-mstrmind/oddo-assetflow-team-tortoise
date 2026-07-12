@@ -7,6 +7,8 @@ import {
   loginUserService,
   logoutService,
   refreshTokenService,
+  getUsersByRoleService,
+  getUsersByDepartmentService,
 } from "./user.service.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import { setCookie } from "../../shared/utils/Token.js";
@@ -68,7 +70,7 @@ export const refreshToken = CatchAsync(async (req, res) => {
   const { accessToken } = await refreshTokenService(userId, refreshToken);
 
   // Set cookie
-  setCookie(res, "token", accessToken);
+  setCookie(res, "accessToken", accessToken);
 
   sendResponse(res, StatusCodes.OK, "Access token refreshed successfully", {
     accessToken,
@@ -81,8 +83,23 @@ export const logoutUser = CatchAsync(async (req, res) => {
 
   await logoutService(userId);
 
-  // Clear the cookie
-  res.clearCookie("token");
+  // Clear both cookies
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
 
   sendResponse(res, StatusCodes.OK, "Logout successful");
+});
+
+// Controller to get users by role (for UI dropdowns)
+export const getUsersByRole = CatchAsync(async (req, res) => {
+  const { role } = req.params;
+  const users = await getUsersByRoleService(role);
+  sendResponse(res, StatusCodes.OK, "Users retrieved", { users });
+});
+
+// Controller to get users by department
+export const getUsersByDepartment = CatchAsync(async (req, res) => {
+  const { deptId } = req.params;
+  const users = await getUsersByDepartmentService(deptId);
+  sendResponse(res, StatusCodes.OK, "Users retrieved", { users });
 });

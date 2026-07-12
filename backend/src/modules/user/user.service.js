@@ -126,3 +126,17 @@ export const logoutService = async (userId) => {
     throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
   }
 };
+
+// Service to get users by role (for dropdown population)
+export const getUsersByRoleService = async (role) => {
+  return await User.find({ role, status: 'active' })
+    .select("-password -refreshToken -__v")
+    .populate("departmentId", "name");
+};
+
+// Service to get users by department
+export const getUsersByDepartmentService = async (departmentId) => {
+  return await User.find({ departmentId, status: 'active' })
+    .select("-password -refreshToken -__v")
+    .populate("departmentId", "name");
+};

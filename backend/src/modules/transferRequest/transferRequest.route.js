@@ -10,7 +10,7 @@ router.use(protect);
 router.post("/", validateBody(validation.createTransferSchema), controller.requestTransfer);
 router.get("/my-transfers", controller.getMyTransfers);
 
-router.use(restrictTo("Admin", "Asset Manager", "Department Head"));
+router.use(restrictTo("admin", "manager"));
 router.get("/", controller.getAllTransfers);
 router.patch("/:id/status", validateBody(validation.updateTransferStatusSchema), controller.updateTransferStatus);
 

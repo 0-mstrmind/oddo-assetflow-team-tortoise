@@ -10,7 +10,7 @@ router.use(protect);
 router.post("/", validateBody(validation.raiseMaintenanceSchema), controller.raiseMaintenance);
 router.get("/my-requests", controller.getMyRequests);
 
-router.use(restrictTo("Admin", "Asset Manager", "Department Head"));
+router.use(restrictTo("admin", "manager"));
 router.get("/", controller.getAllRequests);
 router.patch("/:id/status", validateBody(validation.updateMaintenanceStatusSchema), controller.updateMaintenanceStatus);
 
