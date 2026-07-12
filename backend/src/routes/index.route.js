@@ -20,6 +20,7 @@ import auditCycleRoute from "../modules/auditCycle/auditCycle.route.js";
 import auditAssignmentRoute from "../modules/auditAssignment/auditAssignment.route.js";
 import auditResultRoute from "../modules/auditResult/auditResult.route.js";
 import resourceRoute from "../modules/resource/resource.route.js";
+import activityLogRoute from "../modules/activityLog/activityLog.route.js";
 
 // instance
 const router = express.Router();
@@ -47,5 +48,6 @@ router.use("/audit-cycles", auditCycleRoute);
 router.use("/audit-assignments", auditAssignmentRoute);
 router.use("/audit-results", auditResultRoute);
 router.use("/resources", resourceRoute);
+router.use("/activity-logs", activityLogRoute);
 
 export default router;
