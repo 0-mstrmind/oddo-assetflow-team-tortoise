@@ -3,12 +3,12 @@ import { AuthEndpoints } from "../api/endpoints.js";
 
 export const login = async ({ email, password }) => {
   const { data } = await api.post(AuthEndpoints.LOGIN_API, { email, password });
-  return data.data; // assuming backend returns { data: { user } } or similar
+  return data.user;
 };
 
 export const register = async ({ name, email, password }) => {
   const { data } = await api.post(AuthEndpoints.REGISTER_API, { name, email, password });
-  return data.data;
+  return data.user;
 };
 
 export const logout = async () => {
@@ -17,5 +17,15 @@ export const logout = async () => {
 
 export const getMe = async () => {
   const { data } = await api.get(AuthEndpoints.PROFILE_API);
-  return data.data; // should return the user object with roles
+  return data.user;
+};
+
+export const verifyEmail = async (token) => {
+  const { data } = await api.get(`${AuthEndpoints.VERIFY_EMAIL_API}/${token}`);
+  return data;
+};
+
+export const createEmployee = async (body) => {
+  const { data } = await api.post(AuthEndpoints.CREATE_EMPLOYEE_API, body);
+  return data.user;
 };

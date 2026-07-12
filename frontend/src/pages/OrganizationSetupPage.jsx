@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
+import { useCreateEmployee } from '@/hooks/useAuth';
 import {
   getDepartments,
   addDepartment,
@@ -22,7 +23,8 @@ import {
 } from 'lucide-react';
 
 export default function OrganizationSetupPage() {
-  const { isAdmin } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('departments'); // 'departments' | 'categories' | 'employees'
   
   // Data State
@@ -35,14 +37,37 @@ export default function OrganizationSetupPage() {
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
 
   // Modal forms
   const [deptForm, setDeptForm] = useState({ name: '', headId: '', parentDepartmentId: '' });
   const [catForm, setCatForm] = useState({ name: '', description: '', warrantyPeriod: '' });
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [newRole, setNewRole] = useState('');
+  const [empForm, setEmpForm] = useState({ name: '', email: '', password: '', role: 'employee', departmentId: '' });
 
   // Fetch all initial data
+  const { mutateAsync: createEmployeeMutation } = useCreateEmployee();
+
+  const handleAddEmp = async (e) => {
+    e.preventDefault();
+    try {
+      await createEmployeeMutation(empForm);
+      setIsEmpModalOpen(false);
+      setEmpForm({ name: '', email: '', password: '', role: 'employee', departmentId: '' });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const generateRandomPassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let pass = '';
+    for(let i=0; i<10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    setEmpForm(prev => ({...prev, password: pass}));
+  };
+
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -147,15 +172,13 @@ export default function OrganizationSetupPage() {
             onClick={() => {
               if (activeTab === 'departments') setIsDeptModalOpen(true);
               if (activeTab === 'categories') setIsCatModalOpen(true);
-              if (activeTab === 'employees') {
-                alert('To update employee roles or status, use the "Edit Role" button next to individual employee entries.');
-              }
+              if (activeTab === 'employees') setIsEmpModalOpen(true);
             }}
-            disabled={activeTab === 'employees'}
+            
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
           >
             <Plus size={16} />
-            Add {activeTab === 'departments' ? 'Department' : activeTab === 'categories' ? 'Category' : 'Item'}
+            Add {activeTab === 'departments' ? 'Department' : activeTab === 'categories' ? 'Category' : 'Employee'}
           </button>
         </div>
       </div>
@@ -516,6 +539,103 @@ export default function OrganizationSetupPage() {
                   className="flex-1 h-11 rounded-xl bg-[#D97736] text-white text-sm font-semibold hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all"
                 >
                   Save Role
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Modal */}
+      {isEmpModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EBE6] bg-[#FAF7F5]">
+              <h3 className="font-bold text-[#1E2022] text-base">Create Employee</h3>
+              <button onClick={() => setIsEmpModalOpen(false)} className="p-1 rounded-md text-[#9CA3AF] hover:bg-[#F4EFEB] hover:text-[#1E2022] transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleAddEmp} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Full Name</label>
+                <input
+                  type="text" required
+                  placeholder="John Doe"
+                  value={empForm.name}
+                  onChange={(e) => setEmpForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Email Address</label>
+                <input
+                  type="email" required
+                  placeholder="john@company.com"
+                  value={empForm.email}
+                  onChange={(e) => setEmpForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Password</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text" required
+                    placeholder="Set initial password..."
+                    value={empForm.password}
+                    onChange={(e) => setEmpForm(prev => ({ ...prev, password: e.target.value }))}
+                    className="flex-1 h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all"
+                  />
+                  <button type="button" onClick={generateRandomPassword} className="px-4 h-11 rounded-xl bg-[#E8E2DC] text-xs font-semibold text-[#1E2022] hover:bg-[#D97736] hover:text-white transition-colors">
+                    Random
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Role</label>
+                <select
+                  value={empForm.role}
+                  onChange={(e) => setEmpForm(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all"
+                >
+                  <option value="employee">Employee</option>
+                  <option value="department_head">Department Head</option>
+                  <option value="manager">Asset Manager</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Department</label>
+                <select
+                  value={empForm.departmentId}
+                  onChange={(e) => setEmpForm(prev => ({ ...prev, departmentId: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all"
+                >
+                  <option value="">None / Unassigned</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEmpModalOpen(false)}
+                  className="flex-1 h-11 rounded-xl border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold hover:bg-[#FAF7F5] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 h-11 rounded-xl bg-[#D97736] text-white text-sm font-semibold hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all"
+                >
+                  Create User
                 </button>
               </div>
             </form>

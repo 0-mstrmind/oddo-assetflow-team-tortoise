@@ -6,7 +6,7 @@ import {
   Laptop, Undo2, Calendar, Wrench, PlusCircle, ClipboardCheck,
   ArrowRight, ChevronRight,
 } from 'lucide-react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import {
   getDashboardKPIs,
   getDashboardAlerts,
@@ -168,7 +168,7 @@ function ActivityItem({ activity, isLast }) {
 // ═══════════════════════════════════════════════════════════════════
 
 export default function DashboardPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(s => s.user);
   const [kpis, setKpis] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [activity, setActivity] = useState([]);

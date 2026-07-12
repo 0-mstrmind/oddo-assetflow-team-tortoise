@@ -1,38 +1,51 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { Eye, EyeOff, ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { useLogin, useRegister } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, isLoading, error, clearError } = useAuthStore();
+  const { mutate: login, isPending: isLoginLoading } = useLogin();
+  const { mutate: register, isPending: isRegisterLoading } = useRegister();
+  const isLoading = isLoginLoading || isRegisterLoading;
 
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [error, setError] = useState(null);
+
+  const clearError = () => setError(null);
 
   const updateField = (field, value) => {
     clearError();
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      if (mode === 'signup') {
-        await signUp(form.name, form.email, form.password);
-      } else {
-        await signIn(form.email, form.password);
+    clearError();
+
+    // Frontend Validations
+    if (!form.email || !form.email.includes('@')) {
+      return setError('Please enter a valid email address.');
+    }
+    if (form.password.length < 6) {
+      return setError('Password must be at least 6 characters long.');
+    }
+
+    if (mode === 'register') {
+      if (!form.name || form.name.length < 2) {
+        return setError('Please enter your full name.');
       }
-      navigate('/dashboard');
-    } catch {
-      // error is already set in the store
+      register({ name: form.name, email: form.email, password: form.password });
+    } else {
+      login({ email: form.email, password: form.password });
     }
   };
 
   const toggleMode = () => {
     clearError();
-    setMode((m) => (m === 'login' ? 'signup' : 'login'));
+    setMode((m) => (m === 'login' ? 'register' : 'login'));
   };
 
   return (
@@ -64,22 +77,36 @@ export default function LoginPage() {
         {/* Auth Card */}
         <div className="bg-white rounded-2xl p-8 md:p-9 shadow-[0_4px_24px_rgba(30,32,34,0.06),0_1px_4px_rgba(30,32,34,0.04)] border border-[#F0EBE6]/80">
           {/* Header */}
-          <div className="mb-7">
-            <h1 className="text-2xl font-bold text-[#1E2022] tracking-[-0.02em] mb-1.5">
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
-            </h1>
-            <p className="text-sm text-[#9CA3AF] leading-relaxed">
-              {mode === 'login'
-                ? 'Sign in to your workspace to continue.'
-                : 'Get started with AssetFlow in seconds.'}
-            </p>
+          <div className="bg-[#F9F7F5] p-1 rounded-full flex mb-8">
+            <button
+              onClick={() => setMode('login')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs font-semibold tracking-tight transition-all duration-300 ${
+                mode === 'login' 
+                  ? 'bg-[#1E2022] text-white shadow-sm' 
+                  : 'text-[#6B7280] hover:text-[#1E2022]'
+              }`}
+            >
+              <LogIn size={14} />
+              Sign In
+            </button>
+            <button
+              onClick={() => setMode('register')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs font-semibold tracking-tight transition-all duration-300 ${
+                mode === 'register' 
+                  ? 'bg-[#1E2022] text-white shadow-sm' 
+                  : 'text-[#6B7280] hover:text-[#1E2022]'
+              }`}
+            >
+              <UserPlus size={14} />
+              Initialize Workspace
+            </button>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name field (signup only) */}
-            {mode === 'signup' && (
-              <div className="space-y-1.5">
+            {/* Name field (register only) */}
+            {mode === 'register' && (
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <label htmlFor="name" className="block text-[13px] font-medium text-[#6B7280]">
                   Full Name
                 </label>

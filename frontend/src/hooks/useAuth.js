@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth.store.js";
-import { login, logout, getMe, register } from "../services/auth.service.js";
+import { login, logout, getMe, register, createEmployee } from "../services/auth.service.js";
 import { toast } from "sonner";
 
 const PROFILE_KEY = ["auth", "me"];
@@ -91,6 +91,18 @@ export const useLogout = () => {
       clearUser();
       qc.removeQueries({ queryKey: PROFILE_KEY });
       navigate("/login");
+    },
+  });
+};
+
+export const useCreateEmployee = () => {
+  return useMutation({
+    mutationFn: (body) => createEmployee(body),
+    onSuccess: () => {
+      toast.success("Employee created successfully!");
+    },
+    onError: (err) => {
+      toast.error(extractMessage(err, "Failed to create employee."));
     },
   });
 };

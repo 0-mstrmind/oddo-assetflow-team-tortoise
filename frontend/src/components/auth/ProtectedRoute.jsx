@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import { ShieldAlert } from 'lucide-react';
 
 /**
@@ -9,7 +9,8 @@ import { ShieldAlert } from 'lucide-react';
  * @param {string[]} allowedRoles - List of roles permitted to view this route.
  */
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
-  const { isAuthenticated, user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = !!user;
 
   // 1. Authentication Check
   if (!isAuthenticated) {

@@ -6,7 +6,8 @@ import {
   Bell, LogOut, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { getNavigationItems } from '@/services/api.mock';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
+import { useLogout } from '@/hooks/useAuth';
 
 const ICON_MAP = {
   'layout-dashboard': LayoutDashboard,
@@ -35,7 +36,8 @@ const ROLE_RULES = {
 export default function Sidebar({ collapsed, onToggle }) {
   const [navItems, setNavItems] = useState([]);
   const location = useLocation();
-  const { user, signOut } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const { mutate: signOut } = useLogout();
 
   useEffect(() => {
     getNavigationItems().then(setNavItems);

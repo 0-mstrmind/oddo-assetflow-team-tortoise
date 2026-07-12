@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import {
   getMaintenanceRequests,
   addMaintenanceRequest,
@@ -25,7 +25,9 @@ const COLUMNS = [
 ];
 
 export default function MaintenanceKanbanPage() {
-  const { isAdmin, isAssetManager } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const isAdmin = user?.role === 'admin';
+  const isAssetManager = user?.role === 'manager' || user?.role === 'asset_manager';
   const canManage = isAdmin || isAssetManager; // manager/admin can approve and drag cards
 
   const [requests, setRequests] = useState([]);

@@ -12,14 +12,38 @@ import ReportsPage from '@/pages/ReportsPage';
 import NotificationsPage from '@/pages/NotificationsPage';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import VerifyEmailPage from '@/pages/VerifyEmailPage';
+import { useMe } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/auth.store';
+import { Loader2 } from 'lucide-react';
+
+/**
+ * Initializes auth state on first load.
+ */
+function AuthInitializer({ children }) {
+  useMe(); // fetches /auth/me and hydrates store
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+
+  if (!isHydrated) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-[#FAF7F5]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#D97736]" />
+      </div>
+    );
+  }
+
+  return children;
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <AuthInitializer>
+        <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
         {/* Protected Routes — Dashboard Shell */}
         <Route
@@ -119,6 +143,7 @@ function App() {
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </AuthInitializer>
     </BrowserRouter>
   );
 }
