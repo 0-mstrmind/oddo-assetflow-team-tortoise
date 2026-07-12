@@ -53,22 +53,34 @@ export const generateAuditChecklist = async (cycleId) => {
     const cycle = await AuditCycle.findById(cycleId);
     if (!cycle) throw new ApiError(StatusCodes.NOT_FOUND, "Audit cycle not found");
 
-    // Fetch all assets (optionally filtered by scope if it maps to a department/location)
-    const assetQuery = {};
-    if (cycle.scope) {
-        assetQuery.location = cycle.scope;
-    }
-    const assets = await Asset.find(assetQuery).lean();
-
-    // Fetch existing audit results for this cycle
+    // Fetch all existing audit results for this cycle
     const existingResults = await AuditResult.find({ auditCycleId: cycleId }).lean();
     const resultMap = {};
     for (const r of existingResults) {
         resultMap[r.assetId.toString()] = r;
     }
 
-    // Left-join: merge asset list with audit progress
-    const checklist = assets.map(asset => ({
+    // Fetch scope-filtered assets
+    const assetQuery = {};
+    if (cycle.scope) {
+        assetQuery.location = cycle.scope;
+    }
+    const scopedAssets = await Asset.find(assetQuery).lean();
+    const scopedAssetIds = new Set(scopedAssets.map(a => a._id.toString()));
+
+    // Also fetch any extra assets that have audit results but aren't in the scoped list
+    const extraAssetIds = existingResults
+        .map(r => r.assetId.toString())
+        .filter(id => !scopedAssetIds.has(id));
+
+    let extraAssets = [];
+    if (extraAssetIds.length > 0) {
+        extraAssets = await Asset.find({ _id: { $in: extraAssetIds } }).lean();
+    }
+
+    // Combine and left-join with audit results
+    const allAssets = [...scopedAssets, ...extraAssets];
+    const checklist = allAssets.map(asset => ({
         asset,
         auditResult: resultMap[asset._id.toString()] || null,
         isAudited: !!resultMap[asset._id.toString()],
@@ -79,3 +91,4 @@ export const generateAuditChecklist = async (cycleId) => {
 
     return { checklist, totalAssets, auditedCount, pendingCount: totalAssets - auditedCount };
 };
+

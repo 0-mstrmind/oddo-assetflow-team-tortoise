@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/auth.store';
 import {
   getAuditCycles,
   getAuditChecklist,
+  getAllCycleResults,
   verifyAuditAsset,
   closeAuditCycle,
   createAuditCycle,
@@ -103,17 +104,46 @@ export default function AssetAuditPage() {
       if (active) {
         const activeWithId = { ...active, id: active._id || active.id };
         setActiveCycle(activeWithId);
-        const checklistData = await getAuditChecklist(activeWithId.id);
-        const list = (checklistData.checklist || []).map(item => ({
-          id: item.asset._id || item.asset.id,
-          assetTag: item.asset.assetTag,
-          name: item.asset.name,
-          expectedLocation: item.asset.location || 'HQ',
-          status: item.auditResult?.status || 'pending',
-          remarks: item.auditResult?.remarks || '',
-          condition: item.auditResult?.condition || '',
-        }));
-        setAuditAssets(list);
+
+        // Fetch checklist (scope-filtered assets) + all audit results in parallel
+        const [checklistData, rawResults] = await Promise.all([
+          getAuditChecklist(activeWithId.id),
+          getAllCycleResults(activeWithId.id).catch(() => []),
+        ]);
+
+        // Build map from checklist items
+        const itemMap = {};
+        (checklistData.checklist || []).forEach(item => {
+          const id = item.asset._id || item.asset.id;
+          itemMap[id] = {
+            id,
+            assetTag: item.asset.assetTag,
+            name: item.asset.name,
+            expectedLocation: item.asset.location || 'HQ',
+            status: item.auditResult?.status || 'pending',
+            remarks: item.auditResult?.remarks || '',
+            condition: item.auditResult?.condition || '',
+          };
+        });
+
+        // Merge in any extra results whose assets weren't in the checklist scope
+        rawResults.forEach(result => {
+          const assetId = result.assetId?._id || result.assetId?.id || result.assetId;
+          const assetObj = result.assetId;
+          if (assetId && !itemMap[assetId]) {
+            itemMap[assetId] = {
+              id: assetId,
+              assetTag: typeof assetObj === 'object' ? assetObj.assetTag : '',
+              name: typeof assetObj === 'object' ? assetObj.name : assetId,
+              expectedLocation: typeof assetObj === 'object' ? (assetObj.location || 'HQ') : 'HQ',
+              status: result.status || 'pending',
+              remarks: result.remarks || '',
+              condition: result.condition || '',
+            };
+          }
+        });
+
+        setAuditAssets(Object.values(itemMap));
       } else {
         setActiveCycle(null);
         setAuditAssets([]);
@@ -125,6 +155,7 @@ export default function AssetAuditPage() {
       setIsLoading(false);
     }
   };
+
 
   useEffect(() => {
     if (isAuthorized) {
