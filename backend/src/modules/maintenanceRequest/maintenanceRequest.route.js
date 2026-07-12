@@ -9,6 +9,7 @@ router.use(protect);
 
 router.post("/", validateBody(validation.raiseMaintenanceSchema), controller.raiseMaintenance);
 router.get("/my-requests", controller.getMyRequests);
+router.get("/status/:status", controller.getRequestsByStatus);
 
 router.use(restrictTo("admin", "manager"));
 router.get("/", controller.getAllRequests);
