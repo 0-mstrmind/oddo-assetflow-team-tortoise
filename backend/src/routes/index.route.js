@@ -5,6 +5,7 @@ import { healthRateLimiter } from "../core/middleware/rateLimiter.js";
 import authRoute from "../modules/user/user.route.js";
 import adminRoute from "../modules/admin/admin.route.js";
 import dashboardRoute from "../modules/dashboard/dashboard.route.js";
+import departmentRoute from "../modules/department/department.route.js";
 import sendResponse from "../shared/utils/ApiResponse.js";
 
 /* <NEATNODE_IMPORTS> */
@@ -22,6 +23,7 @@ router.get("/health", healthRateLimiter, (req, res) => {
 router.use("/auth", authRoute);
 router.use("/admin", adminRoute);
 router.use("/dashboard", dashboardRoute);
+router.use("/departments", departmentRoute);
 
 /* <NEATNODE_ROUTES> */
 // Reserved for NeatNode file generation. Do not remove or modify.
