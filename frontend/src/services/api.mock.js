@@ -157,12 +157,37 @@ const DEFAULT_BOOKINGS = [
   { id: 'bk_002', resourceId: 'res_001', bookedBy: 'usr_003', startTime: '14:00', endTime: '15:30', date: new Date().toISOString().split('T')[0], status: 'confirmed' },
 ];
 
+const DEFAULT_MAINTENANCE = [
+  { id: 'm_001', assetTag: 'AF-0003', name: 'Epson WorkForce Pro WF-4830', issue: 'Paper feed rollers are slipping', priority: 'medium', status: 'pending', technician: 'Jordan Kim' },
+  { id: 'm_002', assetTag: 'AF-0001', name: 'MacBook Pro 16"', issue: 'Battery expanding', priority: 'critical', status: 'approved', technician: 'Ravi Patel' },
+  { id: 'm_003', assetTag: 'AF-0005', name: 'Cisco Meraki MR46 AP', issue: 'Frequent dropouts and firmware update failure', priority: 'high', status: 'technician_assigned', technician: 'Jordan Kim' },
+  { id: 'm_004', assetTag: 'AF-0004', name: 'Dell UltraSharp Monitor', issue: 'Lines on screen', priority: 'low', status: 'in_progress', technician: 'Ravi Patel' },
+  { id: 'm_005', assetTag: 'AF-0002', name: 'Herman Miller Aeron Chair', issue: 'Tilted armrest replacement', priority: 'low', status: 'resolved', technician: 'Jordan Kim' },
+];
+
+const DEFAULT_AUDIT_CYCLE = { name: 'Q3 Audit: Engineering Dept', active: true, department: 'Engineering' };
+
+const DEFAULT_AUDIT_ASSETS = [
+  { id: 'au_001', assetTag: 'AF-0001', name: 'MacBook Pro 16" M3 Max', expectedLocation: 'HQ — Floor 3, Desk 42', status: 'pending' },
+  { id: 'au_002', assetTag: 'AF-0004', name: 'Dell UltraSharp U2723QE 27" 4K', expectedLocation: 'HQ — Floor 3, Desk 38', status: 'pending' },
+  { id: 'au_003', assetTag: 'AF-0002', name: 'Herman Miller Aeron Chair', expectedLocation: 'HQ — Floor 2, Studio B', status: 'pending' },
+  { id: 'au_004', assetTag: 'AF-0005', name: 'Cisco Meraki MR46 Access Point', expectedLocation: 'HQ — Floor 3, Ceiling Zone C', status: 'pending' },
+];
+
+const DEFAULT_ACTIVITY_LOGS = [
+  { id: 'log_001', text: 'Laptop AF-0001 allocated to Alex Rivera', category: 'allocation', relativeTime: '2m ago', isAlert: false },
+  { id: 'log_002', text: 'Printer AF-0003 flagged for maintenance by Jordan Kim', category: 'alerts', relativeTime: '15m ago', isAlert: true },
+  { id: 'log_003', text: 'Conference Room B2 booked from 10:00 - 11:30 by Alex Rivera', category: 'bookings', relativeTime: '1h ago', isAlert: false },
+  { id: 'log_004', text: 'Transfer request raised for Monitor AF-0004 by Jordan Kim', category: 'approvals', relativeTime: '2h ago', isAlert: true },
+  { id: 'log_005', text: 'Herman Miller chair status set to available by Admin User', category: 'allocation', relativeTime: '1d ago', isAlert: false },
+];
+
 // ═══════════════════════════════════════════════════════════════════
 //  AUTH API MOCKS
 // ═══════════════════════════════════════════════════════════════════
 
 export async function mockSignIn(email, password) {
-  await delay(700);
+  await delay(500);
   if (!email || !password) throw new Error('Email and password are required.');
 
   const cleanedEmail = email.toLowerCase().trim();
@@ -200,7 +225,7 @@ export async function mockSignIn(email, password) {
 }
 
 export async function mockSignUp(name, email, password) {
-  await delay(800);
+  await delay(600);
   if (!name || !email || !password) throw new Error('All fields are required.');
 
   const initials = name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
@@ -230,7 +255,7 @@ export async function mockSignUp(name, email, password) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getDepartments() {
-  await delay(200);
+  await delay(100);
   const departments = getStorageItem('af_departments', DEFAULT_DEPARTMENTS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
   
@@ -246,7 +271,7 @@ export async function getDepartments() {
 }
 
 export async function addDepartment(deptData) {
-  await delay(300);
+  await delay(150);
   const departments = getStorageItem('af_departments', DEFAULT_DEPARTMENTS);
   const newDept = {
     id: 'dept_' + Date.now(),
@@ -261,12 +286,12 @@ export async function addDepartment(deptData) {
 }
 
 export async function getCategories() {
-  await delay(150);
+  await delay(100);
   return getStorageItem('af_categories', DEFAULT_CATEGORIES);
 }
 
 export async function addCategory(catData) {
-  await delay(200);
+  await delay(150);
   const categories = getStorageItem('af_categories', DEFAULT_CATEGORIES);
   const newCat = {
     id: 'cat_' + Date.now(),
@@ -280,7 +305,7 @@ export async function addCategory(catData) {
 }
 
 export async function getEmployees() {
-  await delay(200);
+  await delay(100);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
   const departments = getStorageItem('af_departments', DEFAULT_DEPARTMENTS);
 
@@ -294,7 +319,7 @@ export async function getEmployees() {
 }
 
 export async function updateEmployeeRole(employeeId, newRole) {
-  await delay(200);
+  await delay(150);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
   const index = employees.findIndex(e => e.id === employeeId);
   if (index !== -1) {
@@ -310,7 +335,7 @@ export async function updateEmployeeRole(employeeId, newRole) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getAssets() {
-  await delay(250);
+  await delay(150);
   const assets = getStorageItem('af_assets', DEFAULT_ASSETS);
   const categories = getStorageItem('af_categories', DEFAULT_CATEGORIES);
   const departments = getStorageItem('af_departments', DEFAULT_DEPARTMENTS);
@@ -327,7 +352,7 @@ export async function getAssets() {
 }
 
 export async function registerAsset(assetData) {
-  await delay(300);
+  await delay(200);
   const assets = getStorageItem('af_assets', DEFAULT_ASSETS);
   const nextNum = String(assets.length + 1).padStart(4, '0');
   const assetTag = `AF-${nextNum}`;
@@ -358,7 +383,7 @@ export async function registerAsset(assetData) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getAllocationHistory(assetId) {
-  await delay(200);
+  await delay(100);
   const allocations = getStorageItem('af_allocations', DEFAULT_ALLOCATIONS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
 
@@ -377,7 +402,7 @@ export async function getAllocationHistory(assetId) {
 }
 
 export async function allocateAsset(assetId, employeeId, expectedReturnDate, allocatedById) {
-  await delay(400);
+  await delay(200);
   const assets = getStorageItem('af_assets', DEFAULT_ASSETS);
   const allocations = getStorageItem('af_allocations', DEFAULT_ALLOCATIONS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
@@ -386,8 +411,6 @@ export async function allocateAsset(assetId, employeeId, expectedReturnDate, all
   if (assetIndex === -1) throw new Error('Asset not found');
 
   const asset = assets[assetIndex];
-  
-  // ── Conflict Check ──
   if (asset.status === 'allocated') {
     const activeAlloc = allocations.find(a => a.assetId === assetId && a.status === 'active');
     const currentHolder = activeAlloc ? employees.find(e => e.id === activeAlloc.employeeId) : null;
@@ -395,7 +418,6 @@ export async function allocateAsset(assetId, employeeId, expectedReturnDate, all
     throw new Error(`Conflict: Asset is already allocated to ${holderName}. Direct re-allocation is blocked.`);
   }
 
-  // Complete successful allocation
   assets[assetIndex].status = 'allocated';
   const targetEmp = employees.find(e => e.id === employeeId);
   assets[assetIndex].assignedTo = targetEmp ? targetEmp.name : 'Unknown';
@@ -417,7 +439,7 @@ export async function allocateAsset(assetId, employeeId, expectedReturnDate, all
 }
 
 export async function submitTransferRequest(assetId, toEmployeeId, reason, requestedById) {
-  await delay(300);
+  await delay(150);
   const transfers = getStorageItem('af_transfers', DEFAULT_TRANSFERS);
   const allocations = getStorageItem('af_allocations', DEFAULT_ALLOCATIONS);
   
@@ -446,12 +468,12 @@ export async function submitTransferRequest(assetId, toEmployeeId, reason, reque
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getResources() {
-  await delay(150);
+  await delay(100);
   return getStorageItem('af_resources', DEFAULT_RESOURCES);
 }
 
 export async function addResource(resData) {
-  await delay(200);
+  await delay(150);
   const resources = getStorageItem('af_resources', DEFAULT_RESOURCES);
   const newRes = {
     id: 'res_' + Date.now(),
@@ -466,7 +488,7 @@ export async function addResource(resData) {
 }
 
 export async function getBookings(resourceId, date) {
-  await delay(200);
+  await delay(150);
   const bookings = getStorageItem('af_bookings', DEFAULT_BOOKINGS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
 
@@ -481,27 +503,22 @@ export async function getBookings(resourceId, date) {
     });
 }
 
-// Time overlap checker helper: parses HH:MM to minutes
 function timeToMinutes(timeStr) {
   const [hours, minutes] = timeStr.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
 export async function createBooking(bookingData) {
-  await delay(400);
+  await delay(200);
   const bookings = getStorageItem('af_bookings', DEFAULT_BOOKINGS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
 
   const { resourceId, date, startTime, endTime, bookedBy } = bookingData;
-
   const startMin = timeToMinutes(startTime);
   const endMin = timeToMinutes(endTime);
 
-  if (startMin >= endMin) {
-    throw new Error('Conflict: Start time must be before end time.');
-  }
+  if (startMin >= endMin) throw new Error('Conflict: Start time must be before end time.');
 
-  // ── Overlap Validation Check ──
   const activeBookings = bookings.filter(
     b => b.resourceId === resourceId && b.date === date && b.status !== 'cancelled'
   );
@@ -509,7 +526,6 @@ export async function createBooking(bookingData) {
   const overlap = activeBookings.find(b => {
     const existingStart = timeToMinutes(b.startTime);
     const existingEnd = timeToMinutes(b.endTime);
-    // overlap exists if: (startA < endB) and (endA > startB)
     return startMin < existingEnd && endMin > existingStart;
   });
 
@@ -532,12 +548,101 @@ export async function createBooking(bookingData) {
   bookings.push(newBooking);
   setStorageItem('af_bookings', bookings);
 
-  // Return with user details populated
   const emp = employees.find(e => e.id === newBooking.bookedBy);
-  return {
-    ...newBooking,
-    bookedByName: emp ? emp.name : 'Unknown User',
+  return { ...newBooking, bookedByName: emp ? emp.name : 'Unknown User' };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SCREEN 7: KANBAN MAINTENANCE
+// ═══════════════════════════════════════════════════════════════════
+
+export async function getMaintenanceRequests() {
+  await delay(200);
+  return getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
+}
+
+export async function addMaintenanceRequest(data) {
+  await delay(250);
+  const list = getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
+  const newReq = {
+    id: 'm_' + Date.now(),
+    assetTag: data.assetTag,
+    name: data.name,
+    issue: data.issue,
+    priority: data.priority || 'medium',
+    status: 'pending',
+    technician: data.technician || 'Unassigned',
   };
+  list.push(newReq);
+  setStorageItem('af_maintenance', list);
+  return newReq;
+}
+
+export async function updateMaintenanceStatus(id, newStatus) {
+  await delay(150);
+  const list = getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
+  const index = list.findIndex(m => m.id === id);
+  if (index !== -1) {
+    list[index].status = newStatus;
+    setStorageItem('af_maintenance', list);
+    return list[index];
+  }
+  throw new Error('Request not found');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SCREEN 8: AUDIT
+// ═══════════════════════════════════════════════════════════════════
+
+export async function getActiveAuditCycle() {
+  await delay(100);
+  return getStorageItem('af_audit_cycle', DEFAULT_AUDIT_CYCLE);
+}
+
+export async function getAuditAssets() {
+  await delay(200);
+  return getStorageItem('af_audit_assets', DEFAULT_AUDIT_ASSETS);
+}
+
+export async function verifyAuditAsset(id, newStatus) {
+  await delay(100);
+  const list = getStorageItem('af_audit_assets', DEFAULT_AUDIT_ASSETS);
+  const index = list.findIndex(a => a.id === id);
+  if (index !== -1) {
+    list[index].status = newStatus;
+    setStorageItem('af_audit_assets', list);
+    return list[index];
+  }
+  throw new Error('Audit asset not found');
+}
+
+export async function closeAuditCycle() {
+  await delay(300);
+  const list = getStorageItem('af_audit_assets', DEFAULT_AUDIT_ASSETS);
+  
+  const total = list.length;
+  const verified = list.filter(a => a.status === 'verified').length;
+  const missing = list.filter(a => a.status === 'missing').length;
+  const damaged = list.filter(a => a.status === 'damaged').length;
+  const pending = list.filter(a => a.status === 'pending').length;
+
+  return {
+    cycleName: DEFAULT_AUDIT_CYCLE.name,
+    closedAt: new Date().toISOString().split('T')[0],
+    stats: { total, verified, missing, damaged, pending },
+    discrepancies: list.filter(a => a.status === 'missing' || a.status === 'damaged'),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SCREEN 10: NOTIFICATIONS & ACTIVITY LOGS
+// ═══════════════════════════════════════════════════════════════════
+
+export async function getActivityLogs(category = 'all') {
+  await delay(150);
+  const logs = getStorageItem('af_activity_logs', DEFAULT_ACTIVITY_LOGS);
+  if (category === 'all') return logs;
+  return logs.filter(l => l.category === category);
 }
 
 // ═══════════════════════════════════════════════════════════════════
