@@ -20,7 +20,9 @@ router.use(restrictTo("admin", "manager"));
 router.get("/", allocationController.getAllAllocations);
 router.get("/overdue", allocationController.getOverdueAllocations);
 router.post("/", validateBody(validation.allocateAssetSchema), allocationController.allocateAsset);
+router.post("/direct-transfer", allocationController.directTransfer);
 router.patch("/:allocationId/return", validateParams(validation.returnAssetParamsSchema), validateBody(validation.returnAssetBodySchema), allocationController.returnAsset);
+router.patch("/:allocationId/revoke", validateParams(validation.returnAssetParamsSchema), allocationController.revokeAllocation);
 
 
 export default router;

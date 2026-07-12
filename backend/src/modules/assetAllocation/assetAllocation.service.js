@@ -110,3 +110,44 @@ export const getAssetAllocationHistoryService = async (assetId) => {
         .populate('employeeId', 'name email')
         .populate('allocatedBy', 'name email');
 };
+
+/**
+ * Admin-initiated direct transfer: revoke from current holder, allocate to new employee.
+ * Works for both allocated and any other active state.
+ */
+export const directTransferService = async (assetId, toEmployeeId, transferredBy, expectedReturnDate) => {
+    const asset = await Asset.findById(assetId);
+    if (!asset) throw new ApiError(StatusCodes.NOT_FOUND, 'Asset not found');
+
+    // Close any active allocation
+    const activeAllocation = await AssetAllocation.findOne({
+        assetId,
+        status: { $in: ['active', 'overdue'] },
+    });
+
+    if (activeAllocation) {
+        activeAllocation.status = 'returned';
+        activeAllocation.returnedAt = new Date();
+        activeAllocation.returnCondition = 'transferred';
+        await activeAllocation.save();
+    }
+
+    // Create new allocation for target employee
+    const newAllocation = new AssetAllocation({
+        assetId,
+        employeeId: toEmployeeId,
+        allocatedBy: transferredBy,
+        expectedReturnDate: expectedReturnDate || undefined,
+    });
+    await newAllocation.save();
+
+    // Keep asset status as allocated
+    asset.status = 'allocated';
+    await asset.save();
+
+    return await AssetAllocation.findById(newAllocation._id)
+        .populate('assetId', 'name assetTag')
+        .populate('employeeId', 'name email')
+        .populate('allocatedBy', 'name email');
+};
+

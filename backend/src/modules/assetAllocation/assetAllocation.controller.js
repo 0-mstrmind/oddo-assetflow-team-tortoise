@@ -5,7 +5,7 @@ import * as allocationService from "./assetAllocation.service.js";
 
 export const allocateAsset = CatchAsync(async (req, res) => {
     const { assetId, employeeId, expectedReturnDate } = req.body;
-    const allocatedBy = req.user.id; // From the protect middleware
+    const allocatedBy = req.user.userid;
     
     const allocation = await allocationService.allocateAssetService(
         assetId, 
@@ -20,7 +20,7 @@ export const allocateAsset = CatchAsync(async (req, res) => {
 export const returnAsset = CatchAsync(async (req, res) => {
     const { allocationId } = req.params;
     const { returnCondition } = req.body;
-    const returnedBy = req.user.id;
+    const returnedBy = req.user.userid;
     
     const allocation = await allocationService.returnAssetService(
         allocationId, 
@@ -45,8 +45,7 @@ export const getAllAllocations = CatchAsync(async (req, res) => {
 });
 
 export const getUserAllocations = CatchAsync(async (req, res) => {
-    // Only fetch allocations for the currently logged-in user
-    const userId = req.user.id;
+    const userId = req.user.userid;
     const allocations = await allocationService.getUserAllocationsService(userId);
     
     sendResponse(res, StatusCodes.OK, "User allocations retrieved", { allocations });
@@ -58,3 +57,19 @@ export const getAssetHistory = CatchAsync(async (req, res) => {
     
     sendResponse(res, StatusCodes.OK, "Asset allocation history retrieved", { history });
 });
+
+// Revoke (return) an active allocation — sets asset back to available
+export const revokeAllocation = CatchAsync(async (req, res) => {
+    const { allocationId } = req.params;
+    const allocation = await allocationService.returnAssetService(allocationId, 'revoked by admin', req.user.userid);
+    sendResponse(res, StatusCodes.OK, "Asset revoked and marked available", { allocation });
+});
+
+// Admin direct transfer: move an allocated asset to a different employee
+export const directTransfer = CatchAsync(async (req, res) => {
+    const { assetId, toEmployeeId, expectedReturnDate } = req.body;
+    const transferredBy = req.user.userid;
+    const allocation = await allocationService.directTransferService(assetId, toEmployeeId, transferredBy, expectedReturnDate);
+    sendResponse(res, StatusCodes.CREATED, "Asset transferred successfully", { allocation });
+});
+
