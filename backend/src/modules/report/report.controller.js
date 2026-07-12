@@ -5,7 +5,8 @@ import {
   getUtilizationReportService,
   getMaintenanceFrequencyService,
   getMostUsedAssetsService,
-  getIdleAssetsService
+  getIdleAssetsService,
+  getMaintenanceDueService
 } from "./report.service.js";
 
 // Retrieve department asset utilization stats
@@ -30,4 +31,10 @@ export const getMostUsedAssets = CatchAsync(async (req, res) => {
 export const getIdleAssets = CatchAsync(async (req, res) => {
   const data = await getIdleAssetsService();
   sendResponse(res, StatusCodes.OK, "Idle assets report retrieved successfully", { data });
+});
+
+// Retrieve assets due for maintenance or nearing retirement
+export const getMaintenanceDueReport = CatchAsync(async (req, res) => {
+  const data = await getMaintenanceDueService();
+  sendResponse(res, StatusCodes.OK, "Maintenance due and retirement report retrieved successfully", { data });
 });

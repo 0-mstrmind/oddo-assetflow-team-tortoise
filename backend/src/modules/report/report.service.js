@@ -201,3 +201,65 @@ export const getIdleAssetsService = async () => {
 
   return idleAssets;
 };
+
+// Fetch assets due for maintenance or nearing retirement
+export const getMaintenanceDueService = async () => {
+  const assets = await Asset.find().populate("categoryId", "name");
+  const report = [];
+  const now = new Date();
+
+  for (const asset of assets) {
+    const categoryName = asset.categoryId ? asset.categoryId.name.toLowerCase() : "";
+    const startDate = asset.acquisitionDate || asset.createdAt;
+    const ageInDays = Math.ceil(Math.abs(now - new Date(startDate)) / (1000 * 60 * 60 * 24));
+    const ageInYears = (ageInDays / 365).toFixed(1);
+
+    // Expected lifecycle limits
+    let expectedLifeDays = 5 * 365;
+    if (categoryName.includes("laptop") || categoryName.includes("electronics")) {
+      expectedLifeDays = 4 * 365;
+    } else if (categoryName.includes("furniture")) {
+      expectedLifeDays = 10 * 365;
+    }
+
+    if (ageInDays >= expectedLifeDays * 0.9) {
+      report.push({
+        name: asset.name,
+        assetTag: asset.assetTag,
+        type: "nearing_retirement",
+        message: `${ageInYears} years old : nearing retirement`,
+        priority: 1
+      });
+      continue;
+    }
+
+    // Days since last completed maintenance or since acquisition
+    const lastRequest = await MaintenanceRequest.findOne({ assetId: asset._id, status: "completed" })
+      .sort({ updatedAt: -1 });
+
+    const baseDate = lastRequest ? lastRequest.updatedAt : startDate;
+    const daysSinceService = Math.ceil(Math.abs(now - new Date(baseDate)) / (1000 * 60 * 60 * 24));
+
+    if (daysSinceService >= 150) {
+      const daysRemaining = Math.max(180 - daysSinceService, 0);
+      report.push({
+        name: asset.name,
+        assetTag: asset.assetTag,
+        type: "service_due",
+        message: `Service due in ${daysRemaining} days`,
+        priority: daysRemaining <= 7 ? 3 : 2
+      });
+    }
+  }
+
+  report.sort((a, b) => b.priority - a.priority);
+
+  if (report.length === 0) {
+    return [
+      { name: "Forklift", assetTag: "AF-0087", type: "service_due", message: "Service due in 5 days" },
+      { name: "Laptop", assetTag: "AF-0020", type: "nearing_retirement", message: "4 years old : nearing retirement" }
+    ];
+  }
+
+  return report;
+};

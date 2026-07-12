@@ -4,7 +4,8 @@ import {
   getUtilizationReport,
   getMaintenanceFrequencyReport,
   getMostUsedAssets,
-  getIdleAssets
+  getIdleAssets,
+  getMaintenanceDueReport
 } from "./report.controller.js";
 
 const router = express.Router();
@@ -24,5 +25,8 @@ router.get("/most-used", getMostUsedAssets);
 
 // Idle assets report
 router.get("/idle", getIdleAssets);
+
+// Maintenance due and retirement report
+router.get("/maintenance-due", getMaintenanceDueReport);
 
 export default router;
