@@ -374,6 +374,19 @@ export default function OrganizationSetupPage() {
                       </td>
                     </tr>
                   ))}
+                  {employees.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-10 h-10 rounded-full bg-[#F4EFEB] flex items-center justify-center">
+                            <Users size={18} className="text-[#D8D2CC]" />
+                          </div>
+                          <p className="text-sm text-[#9CA3AF]">No employees found</p>
+                          <p className="text-xs text-[#C5BEB8]">Add an employee to get started</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
