@@ -10,6 +10,15 @@
 Live Demo: **[Live Demo URL]**  
 Backend REST API: **[Backend API URL]**
 
+<div align="center">
+  <strong>Quick Navigate:</strong><br>
+  <a href="#1-the-vision--problem-solved">Vision</a> &nbsp;|&nbsp; 
+  <a href="#2-core-features-the-wow-factor">Core Features</a> &nbsp;|&nbsp; 
+  <a href="#3-system-architecture">Architecture & DB</a> &nbsp;|&nbsp; 
+  <a href="#5-api-endpoints-reference">API Documentation</a> &nbsp;|&nbsp; 
+  <a href="#6-local-setup--running">Local Setup & Env</a>
+</div>
+
 ---
 
 ## 1. The Vision & Problem Solved
@@ -37,9 +46,6 @@ Secured at both the routing level and state layers, AssetFlow supports five dist
 
 ### 📋 Drag-and-Drop Maintenance Kanban
 Visual ticket tracking for repairs. Tickets flow seamlessly through custom lanes (**Pending**, **Approved**, **In Progress**, **Resolved**, and **Cancelled**). State changes trigger automated updates and re-assign asset status (e.g., transition to `maintenance` or back to `available`).
-
-### 🚀 "One-Click" Demo Mode
-Designed specifically for hackathon evaluators. A custom state-interception layer allows you to instantly populate the application with rich, simulated mock assets, categories, users, and allocations directly in the browser—all without running command-line seeding scripts or manual entry.
 
 ---
 
