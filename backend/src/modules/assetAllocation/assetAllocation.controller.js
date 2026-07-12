@@ -51,3 +51,10 @@ export const getUserAllocations = CatchAsync(async (req, res) => {
     
     sendResponse(res, StatusCodes.OK, "User allocations retrieved", { allocations });
 });
+
+export const getAssetHistory = CatchAsync(async (req, res) => {
+    const { assetId } = req.params;
+    const history = await allocationService.getAssetAllocationHistoryService(assetId);
+    
+    sendResponse(res, StatusCodes.OK, "Asset allocation history retrieved", { history });
+});
