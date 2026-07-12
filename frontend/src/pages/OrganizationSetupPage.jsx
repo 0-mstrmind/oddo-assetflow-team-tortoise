@@ -10,6 +10,7 @@ import {
   ShieldAlert, Plus, Users, Building, FolderOpen,
   X, Edit2, Trash2, Download, AlertTriangle,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const inputCls = 'w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all';
 const selectCls = 'w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all';
@@ -17,6 +18,10 @@ const cancelBtnCls = 'flex-1 h-11 rounded-xl border border-[#E8E2DC] text-[#1E20
 const saveBtnCls = 'flex-1 h-11 rounded-xl bg-[#D97736] text-white text-sm font-semibold hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all';
 
 const ROLE_LABEL = { manager: 'Asset Manager', auditor: 'Auditor', technician: 'Technician', admin: 'Administrator', employee: 'Employee' };
+
+function extractMessage(err, fallback) {
+  return err?.response?.data?.message ?? fallback;
+}
 
 export default function OrganizationSetupPage() {
   const user = useAuthStore(s => s.user);
@@ -46,7 +51,7 @@ export default function OrganizationSetupPage() {
 
   // ── Forms ─────────────────────────────────────────────────────────
   const [deptForm, setDeptForm] = useState({ name: '', headId: '', parentDepartmentId: '' });
-  const [catForm, setCatForm] = useState({ name: '', description: '', warrantyPeriod: '' });
+  const [catForm, setCatForm] = useState({ name: '', description: '' });
   const [empForm, setEmpForm] = useState({ name: '', email: '', password: '', role: 'employee', departmentId: '' });
   const [newRole, setNewRole] = useState('employee');
 
@@ -65,7 +70,6 @@ export default function OrganizationSetupPage() {
       })));
       setCategories(rawCats.map(c => ({
         ...c, id: c._id || c.id,
-        warrantyPeriod: c.warrantyPeriod || '—',
       })));
       setEmployees(rawEmps.map(e => ({
         ...e, id: e._id || e.id,
@@ -74,7 +78,7 @@ export default function OrganizationSetupPage() {
         status: e.status || 'active',
       })));
     } catch (err) {
-      console.error(err);
+      toast.error(extractMessage(err, 'Failed to load organization data'));
     } finally {
       setIsLoading(false);
     }
@@ -91,10 +95,13 @@ export default function OrganizationSetupPage() {
         ...(deptForm.headId && { headId: deptForm.headId }),
         ...(deptForm.parentDepartmentId && { parentDepartmentId: deptForm.parentDepartmentId }),
       });
+      toast.success('Department added successfully');
       setIsDeptModalOpen(false);
       setDeptForm({ name: '', headId: '', parentDepartmentId: '' });
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to add department'));
+    }
   };
 
   const handleEditDeptSubmit = async (e) => {
@@ -102,12 +109,15 @@ export default function OrganizationSetupPage() {
     try {
       await updateDepartment(editDept.id, {
         name: editDept.name,
-        ...(editDept.headId && { headId: editDept.headId }),
-        ...(editDept.parentDepartmentId && { parentDepartmentId: editDept.parentDepartmentId }),
+        headId: editDept.headId || null,
+        parentDepartmentId: editDept.parentDepartmentId || null,
       });
+      toast.success('Department updated successfully');
       setEditDept(null);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to update department'));
+    }
   };
 
   const handleDeleteDept = async () => {
@@ -115,10 +125,14 @@ export default function OrganizationSetupPage() {
     setIsDeleting(true);
     try {
       await deleteDepartment(deleteConfirmDept.id);
+      toast.success('Department deleted successfully');
       setDeleteConfirmDept(null);
       fetchData();
-    } catch (err) { console.error(err); }
-    finally { setIsDeleting(false); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to delete department'));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // ── Handlers: Category ───────────────────────────────────────────
@@ -127,13 +141,15 @@ export default function OrganizationSetupPage() {
     try {
       await createCategory({
         name: catForm.name,
-        ...(catForm.description && { description: catForm.description }),
-        ...(catForm.warrantyPeriod && { warrantyPeriod: catForm.warrantyPeriod }),
+        description: catForm.description || '',
       });
+      toast.success('Category added successfully');
       setIsCatModalOpen(false);
-      setCatForm({ name: '', description: '', warrantyPeriod: '' });
+      setCatForm({ name: '', description: '' });
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to add category'));
+    }
   };
 
   const handleEditCatSubmit = async (e) => {
@@ -141,12 +157,14 @@ export default function OrganizationSetupPage() {
     try {
       await updateCategory(editCat.id, {
         name: editCat.name,
-        ...(editCat.description && { description: editCat.description }),
-        ...(editCat.warrantyPeriod && { warrantyPeriod: editCat.warrantyPeriod }),
+        description: editCat.description || '',
       });
+      toast.success('Category updated successfully');
       setEditCat(null);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to update category'));
+    }
   };
 
   const handleDeleteCat = async () => {
@@ -154,10 +172,14 @@ export default function OrganizationSetupPage() {
     setIsDeleting(true);
     try {
       await deleteCategory(deleteConfirmCat.id);
+      toast.success('Category deleted successfully');
       setDeleteConfirmCat(null);
       fetchData();
-    } catch (err) { console.error(err); }
-    finally { setIsDeleting(false); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to delete category'));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // ── Handlers: Employee ───────────────────────────────────────────
@@ -177,7 +199,9 @@ export default function OrganizationSetupPage() {
       setIsEmpModalOpen(false);
       setEmpForm({ name: '', email: '', password: '', role: 'employee', departmentId: '' });
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleUpdateRole = async (e) => {
@@ -185,9 +209,12 @@ export default function OrganizationSetupPage() {
     if (!editEmp) return;
     try {
       await updateEmployeeRole(editEmp.id, { role: newRole });
+      toast.success('Employee role updated successfully');
       setEditEmp(null);
       fetchData();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to update employee role'));
+    }
   };
 
   const handleDeleteEmp = async () => {
@@ -195,10 +222,14 @@ export default function OrganizationSetupPage() {
     setIsDeleting(true);
     try {
       await deleteEmployee(deleteConfirmEmp.id);
+      toast.success('Employee deleted successfully');
       setDeleteConfirmEmp(null);
       fetchData();
-    } catch (err) { console.error(err); }
-    finally { setIsDeleting(false); }
+    } catch (err) {
+      toast.error(extractMessage(err, 'Failed to delete employee'));
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const exportEmployeesCSV = () => {
@@ -392,7 +423,6 @@ export default function OrganizationSetupPage() {
                   <tr className="bg-[#FAF7F5]/80 border-b border-[#F0EBE6] text-xs font-bold text-[#6B7280] uppercase tracking-wider">
                     <th className="py-4 px-6">Category Name</th>
                     <th className="py-4 px-6">Description</th>
-                    <th className="py-4 px-6">Warranty Period</th>
                     <th className="py-4 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -401,7 +431,6 @@ export default function OrganizationSetupPage() {
                     <tr key={cat.id} className="hover:bg-[#FAF7F5]/30 transition-colors duration-150">
                       <td className="py-4 px-6 font-semibold">{cat.name}</td>
                       <td className="py-4 px-6 text-[#6B7280] max-w-sm truncate">{cat.description || 'No description'}</td>
-                      <td className="py-4 px-6 text-[#6B7280]">{cat.warrantyPeriod}</td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => setEditCat({ ...cat })}
@@ -417,7 +446,7 @@ export default function OrganizationSetupPage() {
                     </tr>
                   ))}
                   {categories.length === 0 && (
-                    <tr><td colSpan="4" className="text-center py-12">
+                    <tr><td colSpan="3" className="text-center py-12">
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-10 h-10 rounded-full bg-[#F4EFEB] flex items-center justify-center"><FolderOpen size={18} className="text-[#D8D2CC]" /></div>
                         <p className="text-sm text-[#9CA3AF]">No categories configured</p>
@@ -539,11 +568,6 @@ export default function OrganizationSetupPage() {
                 onChange={e => setCatForm(p => ({ ...p, description: e.target.value }))}
                 className="w-full p-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all resize-none" />
             </div>
-            <div className="space-y-1.5">
-              <label className="block text-[13px] font-medium text-[#6B7280]">Default Warranty Period</label>
-              <input placeholder="e.g. 3 Years, 12 Months" value={catForm.warrantyPeriod}
-                onChange={e => setCatForm(p => ({ ...p, warrantyPeriod: e.target.value }))} className={inputCls} />
-            </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setIsCatModalOpen(false)} className={cancelBtnCls}>Cancel</button>
               <button type="submit" className={saveBtnCls}>Add Category</button>
@@ -646,11 +670,6 @@ export default function OrganizationSetupPage() {
               <textarea value={editCat.description || ''} rows={3}
                 onChange={e => setEditCat(p => ({ ...p, description: e.target.value }))}
                 className="w-full p-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all resize-none" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-[13px] font-medium text-[#6B7280]">Default Warranty Period</label>
-              <input value={editCat.warrantyPeriod === '—' ? '' : (editCat.warrantyPeriod || '')}
-                onChange={e => setEditCat(p => ({ ...p, warrantyPeriod: e.target.value }))} className={inputCls} />
             </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setEditCat(null)} className={cancelBtnCls}>Cancel</button>
