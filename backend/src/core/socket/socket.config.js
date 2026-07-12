@@ -54,6 +54,17 @@ export const initializeSocket = (server) => {
     io.on("connection", (socket) => {
         logger.info(`Socket User connected: ${socket.user.id}`);
 
+        // Each user joins their own personal room for targeted notifications
+        const userRoom = `user:${socket.user.id}`;
+        socket.join(userRoom);
+        logger.info(`Socket User ${socket.user.id} joined room: ${userRoom}`);
+
+        // Also join a role-based room so we can broadcast to all admins at once
+        if (socket.user.role) {
+            const roleRoom = `role:${socket.user.role}`;
+            socket.join(roleRoom);
+        }
+
         socket.on("disconnect", () => {
             logger.info(`Socket User disconnected: ${socket.user.id}`);
         });

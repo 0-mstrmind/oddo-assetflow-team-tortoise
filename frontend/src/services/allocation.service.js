@@ -37,3 +37,48 @@ export const submitTransferRequest = async (assetId, toEmployeeId, reason) => {
   const { data } = await api.post("/transfers", payload);
   return data.transfer;
 };
+
+/**
+ * Fetch all pending asset requests (admin only).
+ */
+export const getPendingRequests = async () => {
+  const { data } = await api.get("/transfers/pending");
+  return data.transfers || [];
+};
+
+/**
+ * Approve or reject an asset request (admin only).
+ */
+export const updateRequestStatus = async (transferId, status) => {
+  const { data } = await api.patch(`/transfers/${transferId}/status`, { status });
+  return data.transfer;
+};
+
+/**
+ * Get all active allocations (admin) — used for the manage tab.
+ */
+export const getActiveAllocations = async () => {
+  const { data } = await api.get('/allocations', { params: { status: 'active' } });
+  return data.allocations || [];
+};
+
+/**
+ * Revoke an active allocation — marks asset as available again.
+ */
+export const revokeAllocation = async (allocationId) => {
+  const { data } = await api.patch(`/allocations/${allocationId}/revoke`);
+  return data.allocation;
+};
+
+/**
+ * Admin direct transfer: move allocated asset from current holder to new employee.
+ */
+export const directTransfer = async (assetId, toEmployeeId, expectedReturnDate) => {
+  const { data } = await api.post('/allocations/direct-transfer', {
+    assetId,
+    toEmployeeId,
+    expectedReturnDate: expectedReturnDate || undefined,
+  });
+  return data.allocation;
+};
+

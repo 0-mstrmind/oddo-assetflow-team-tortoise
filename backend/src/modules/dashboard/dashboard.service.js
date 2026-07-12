@@ -6,7 +6,7 @@ import AssetAllocation from "../assetAllocation/assetAllocation.model.js";
 import ActivityLog from "../activityLog/activityLog.model.js";
 
 // Fetch dashboard metrics counts using MongoDB aggregations
-export const getDashboardMetricsService = async () => {
+export const getDashboardMetricsService = async (user) => {
   const now = new Date();
 
   const [assetStats, resourceStats, bookingStats, transferStats, allocationStats] = await Promise.all([
@@ -91,32 +91,12 @@ export const getDashboardMetricsService = async () => {
   const overdueReturns = allocationStats[0]?.overdue || 0;
 
   // Retrieve recent activity logs
-  let recentActivities = await ActivityLog.find()
+  const activityQuery = user?.role === 'employee' ? { userId: user.userid } : {};
+  let recentActivities = await ActivityLog.find(activityQuery)
     .sort({ createdAt: -1 })
     .limit(10)
     .populate("userId", "name email")
     .lean();
-
-  if (recentActivities.length === 0) {
-    // Populate with realistic mock activities from the screen mockup if database is empty
-    recentActivities = [
-      {
-        _id: "mock1",
-        description: "Laptop AF-0114 - allocated to Priya shah - IT dept",
-        createdAt: new Date(Date.now() - 5 * 60 * 1000)
-      },
-      {
-        _id: "mock2",
-        description: "Room B2 - booking confirmed - 2:00 to 3:00 PM",
-        createdAt: new Date(Date.now() - 30 * 60 * 1000)
-      },
-      {
-        _id: "mock3",
-        description: "Projector AF-0062 - maintenance resolved",
-        createdAt: new Date(Date.now() - 120 * 60 * 1000)
-      }
-    ];
-  }
 
   return {
     metrics: {

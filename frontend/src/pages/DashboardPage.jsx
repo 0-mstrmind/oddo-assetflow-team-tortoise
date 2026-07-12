@@ -232,7 +232,7 @@ export default function DashboardPage() {
     actions.push({
       id: 'request',
       label: 'Raise Request',
-      href: '/allocations',
+      href: role === 'employee' ? '/requests' : '/allocations',
       variant: 'secondary',
     });
     return actions;
