@@ -11,7 +11,7 @@ export default function LoginPage() {
 
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', companyName: '' });
   const [error, setError] = useState(null);
 
   const clearError = () => setError(null);
@@ -35,9 +35,12 @@ export default function LoginPage() {
 
     if (mode === 'register') {
       if (!form.name || form.name.length < 2) {
-        return setError('Please enter your full name.');
+        return setError('Please enter your admin name.');
       }
-      register({ name: form.name, email: form.email, password: form.password });
+      if (!form.companyName || form.companyName.length < 2) {
+        return setError('Please enter your company name.');
+      }
+      register({ name: form.name, email: form.email, password: form.password, companyName: form.companyName });
     } else {
       login({ email: form.email, password: form.password });
     }
@@ -104,22 +107,38 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name field (register only) */}
+            {/* Name and Company fields (register only) */}
             {mode === 'register' && (
-              <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <label htmlFor="name" className="block text-[13px] font-medium text-[#6B7280]">
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                  placeholder="Sarah Mitchell"
-                  required
-                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] outline-none transition-all duration-200 focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white"
-                />
-              </div>
+              <>
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <label htmlFor="name" className="block text-[13px] font-medium text-[#6B7280]">
+                    Admin Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => updateField('name', e.target.value)}
+                    placeholder="Sarah Mitchell"
+                    required
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] outline-none transition-all duration-200 focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white"
+                  />
+                </div>
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75">
+                  <label htmlFor="companyName" className="block text-[13px] font-medium text-[#6B7280]">
+                    Company Name
+                  </label>
+                  <input
+                    id="companyName"
+                    type="text"
+                    value={form.companyName}
+                    onChange={(e) => updateField('companyName', e.target.value)}
+                    placeholder="Acme Corp"
+                    required
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] outline-none transition-all duration-200 focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white"
+                  />
+                </div>
+              </>
             )}
 
             {/* Email */}

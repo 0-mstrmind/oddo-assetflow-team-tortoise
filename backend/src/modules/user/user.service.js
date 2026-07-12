@@ -11,13 +11,8 @@ import crypto from 'crypto';
 import { sendVerificationEmail } from "../../shared/utils/email.service.js";
 
 // Service to create a new user (Public Registration / Workspace Init)
-export const createUserService = async ({ name, email, password }) => {
-  // Check if workspace is already initialized (only first user can be created publicly)
-  const userCount = await User.countDocuments();
-  if (userCount > 0) {
-    throw new ApiError(StatusCodes.FORBIDDEN, "Workspace already initialized. Registration is disabled. Please contact your administrator.");
-  }
-
+export const createUserService = async ({ name, email, password, companyName }) => {
+  // Removed workspace initialization lock to allow multiple admins (companies) to register
   // Check if user exists
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(StatusCodes.CONFLICT, "User already exists");
@@ -34,6 +29,7 @@ export const createUserService = async ({ name, email, password }) => {
     name,
     email,
     password: hashedPassword,
+    companyName,
     role: 'admin',
     verificationToken,
   });

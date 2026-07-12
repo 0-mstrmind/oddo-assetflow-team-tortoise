@@ -17,12 +17,13 @@ import { setCookie } from "../../shared/utils/Token.js";
 
 // Controller to create a new user
 export const registerUser = CatchAsync(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, companyName } = req.body;
 
   const { user, accessToken, refreshToken } = await createUserService({
     name,
     email,
     password,
+    companyName,
   });
 
   setCookie(res, "accessToken", accessToken);
