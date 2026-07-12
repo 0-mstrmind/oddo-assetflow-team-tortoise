@@ -27,3 +27,26 @@ export const createAssetInput = joi.object({
     assetTag: joi.string().allow('', null),
     qrCode: joi.string().allow('', null)
 });
+
+// Validate asset ID in params
+export const assetIdParam = joi.object({
+    id: joi.string().pattern(objectIdPattern).required().messages({
+        'string.pattern.base': 'Invalid Asset ID format'
+    })
+});
+
+// Update asset input validation schema
+export const updateAssetInput = joi.object({
+    name: joi.string(),
+    categoryId: joi.string().pattern(objectIdPattern).messages({
+        'string.pattern.base': 'Invalid Category ID format'
+    }),
+    serialNumber: joi.string().allow('', null),
+    location: joi.string().allow('', null),
+    acquisitionCost: joi.number().min(0).allow(null),
+    condition: joi.string().valid('new', 'good', 'fair', 'poor', 'damaged'),
+    isBookable: joi.boolean(),
+    status: joi.string().valid('available', 'allocated', 'maintenance', 'retired', 'reserved'),
+    assetTag: joi.string(),
+    qrCode: joi.string().allow('', null)
+});

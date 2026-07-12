@@ -1,6 +1,7 @@
 import Asset from "./asset.model.js";
 import AssetAllocation from "../assetAllocation/assetAllocation.model.js";
 import User from "../user/user.model.js";
+import MaintenanceRequest from "../maintenanceRequest/maintenanceRequest.model.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 
@@ -81,4 +82,74 @@ export const createAssetService = async (data) => {
   });
 
   return await Asset.findById(asset._id).populate("categoryId", "name description");
+};
+
+// Retrieve detailed asset information including history
+export const getAssetDetailsService = async (assetId) => {
+  const asset = await Asset.findById(assetId).populate("categoryId", "name description");
+  if (!asset) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Asset not found");
+  }
+
+  // Get active allocation (current holder)
+  const currentAllocation = await AssetAllocation.findOne({
+    assetId,
+    status: "active"
+  }).populate("employeeId", "name email role");
+
+  // Get allocation history
+  const allocationHistory = await AssetAllocation.find({ assetId })
+    .sort({ allocatedAt: -1 })
+    .populate("employeeId", "name email role")
+    .populate("allocatedBy", "name email role");
+
+  // Get maintenance history
+  const maintenanceHistory = await MaintenanceRequest.find({ assetId })
+    .sort({ createdAt: -1 })
+    .populate("requestedBy", "name email role")
+    .populate("approvedBy", "name email role")
+    .populate("technicianId", "name email role");
+
+  return {
+    asset,
+    currentHolder: currentAllocation ? currentAllocation.employeeId : null,
+    allocationHistory,
+    maintenanceHistory,
+    documents: []
+  };
+};
+
+// Update asset details
+export const updateAssetService = async (assetId, updateData) => {
+  if (updateData.assetTag) {
+    const existing = await Asset.findOne({ assetTag: updateData.assetTag, _id: { $ne: assetId } });
+    if (existing) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, "Asset Tag already exists");
+    }
+  }
+
+  if (updateData.qrCode) {
+    const existingQr = await Asset.findOne({ qrCode: updateData.qrCode, _id: { $ne: assetId } });
+    if (existingQr) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, "QR Code already registered");
+    }
+  }
+
+  const asset = await Asset.findByIdAndUpdate(assetId, updateData, { new: true, runValidators: true })
+    .populate("categoryId", "name description");
+
+  if (!asset) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Asset not found");
+  }
+
+  return asset;
+};
+
+// Delete asset from database
+export const deleteAssetService = async (assetId) => {
+  const asset = await Asset.findByIdAndDelete(assetId);
+  if (!asset) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Asset not found");
+  }
+  return asset;
 };
