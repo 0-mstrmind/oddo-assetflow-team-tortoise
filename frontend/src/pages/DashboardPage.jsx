@@ -11,8 +11,12 @@ import { useAppStore } from '@/store/useAppStore';
 import {
   getDashboardAlerts,
   getQuickActions,
+  getDashboardKPIs,
+  getRecentActivity,
 } from '@/services/api.mock';
 import { getDashboardData } from '@/services/dashboard.service';
+import { toast } from 'sonner';
+
 
 // ─── Icon Map for Activity Feed ──────────────────────────────────
 const ACTIVITY_ICON_MAP = {
@@ -181,6 +185,20 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       setIsLoading(true);
       try {
+        if (isDemoMode) {
+          const [mockKpis, mockActivities, alertData, actionData] = await Promise.all([
+            getDashboardKPIs(),
+            getRecentActivity(),
+            getDashboardAlerts(),
+            getQuickActions(user?.role),
+          ]);
+          setKpis(mockKpis);
+          setActivity(mockActivities);
+          setAlerts(alertData);
+          setQuickActions(actionData);
+          return;
+        }
+
         const [dashboardBackend, alertData, actionData] = await Promise.all([
           getDashboardData(),
           getDashboardAlerts(),
@@ -266,6 +284,27 @@ export default function DashboardPage() {
         setQuickActions(actionData);
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
+        toast.error("Failed to load live dashboard data. Using local demo/mock workspace.");
+        try {
+          const [mockKpis, mockActivities, alertData, actionData] = await Promise.all([
+            getDashboardKPIs(),
+            getRecentActivity(),
+            getDashboardAlerts(),
+            getQuickActions(user?.role),
+          ]);
+          setKpis(mockKpis);
+          setActivity(mockActivities);
+          setAlerts(alertData);
+          setQuickActions(actionData);
+        } catch (e) {
+          setKpis({
+            available: { count: 0, trend: '', trendDirection: 'neutral' },
+            allocated: { count: 0, trend: '', trendDirection: 'neutral' },
+            activeBookings: { count: 0, trend: '', trendDirection: 'neutral' },
+            pendingTransfers: { count: 0, trend: '', trendDirection: 'neutral' },
+            upcomingReturns: { count: 0, trend: '', trendDirection: 'neutral' },
+          });
+        }
       } finally {
         setIsLoading(false);
       }
