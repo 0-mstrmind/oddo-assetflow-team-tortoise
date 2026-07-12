@@ -8,7 +8,6 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
 Live Demo: **[Live Demo URL]**  
-Backend REST API: **[Backend API URL]**
 
 <div align="center">
   <strong>Quick Navigate:</strong><br>
