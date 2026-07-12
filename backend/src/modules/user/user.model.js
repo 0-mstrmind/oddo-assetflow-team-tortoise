@@ -19,8 +19,17 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['user', 'admin'],
-        default: 'user',
+        enum: ['admin', 'employee', 'auditor', 'technician', 'manager'],
+        default: 'employee',
+    },
+    departmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "department",
+    },
+    status: {
+        type: String,
+        enum: ['active', 'inactive', 'suspended'],
+        default: 'active',
     },
 
     refreshToken: {
