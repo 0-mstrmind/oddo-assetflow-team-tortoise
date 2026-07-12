@@ -24,7 +24,7 @@ export const protect = (req, res, next) => {
     return next(new ApiError(StatusCodes.UNAUTHORIZED, "Unauthorized"));
   }
 
-  req.user = decoded;
+  req.user = { ...decoded, userid: decoded.id };
   next();
 };
 
@@ -55,7 +55,7 @@ export const refreshTokenMiddleware = (req, res, next) => {
     return next(new ApiError(StatusCodes.UNAUTHORIZED, "Unauthorized"));
   }
 
-  req.user = decoded;
+  req.user = { ...decoded, userid: decoded.id };
   req.refreshToken = token;
   
   next();
