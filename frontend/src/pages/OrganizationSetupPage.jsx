@@ -97,6 +97,9 @@ export default function OrganizationSetupPage() {
   const [catForm, setCatForm] = useState({ name: '', description: '' });
   const [empForm, setEmpForm] = useState({ name: '', email: '', password: '', role: 'employee', departmentId: '' });
   const [newRole, setNewRole] = useState('employee');
+  const [newDepartmentId, setNewDepartmentId] = useState('');
+
+  const isEditingSelf = editEmp && (editEmp.email === user?.email || editEmp.id === user?.id || editEmp.id === user?.userid);
 
   const { mutateAsync: createEmployeeMutation } = useCreateEmployee();
 
@@ -251,12 +254,16 @@ export default function OrganizationSetupPage() {
     e.preventDefault();
     if (!editEmp) return;
     try {
-      await updateEmployeeRole(editEmp.id, { role: newRole });
-      toast.success('Employee role updated successfully');
+      const payload = {
+        role: newRole,
+        departmentId: newDepartmentId || null,
+      };
+      await updateEmployeeRole(editEmp.id, payload);
+      toast.success('Employee details updated successfully');
       setEditEmp(null);
       fetchData();
     } catch (err) {
-      toast.error(extractMessage(err, 'Failed to update employee role'));
+      toast.error(extractMessage(err, 'Failed to update employee'));
     }
   };
 
@@ -494,9 +501,13 @@ export default function OrganizationSetupPage() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => { setEditEmp(emp); setNewRole(emp.role); }}
+                          <button onClick={() => {
+                            setEditEmp(emp);
+                            setNewRole(emp.role);
+                            setNewDepartmentId(emp.departmentId?._id || emp.departmentId || '');
+                          }}
                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FAF7F5] hover:bg-[#F4EFEB] border border-[#E8E2DC] text-[#1E2022] text-xs font-semibold rounded-lg transition-colors">
-                            <Edit2 size={12} /> Edit Role
+                            <Edit2 size={12} /> Edit
                           </button>
                           <button onClick={() => setDeleteConfirmEmp(emp)}
                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FFF1F0] hover:bg-[#FFE4E2] border border-[#FFC9C6] text-red-600 text-xs font-semibold rounded-lg transition-colors">
@@ -680,7 +691,7 @@ export default function OrganizationSetupPage() {
       )}
 
       {editEmp && (
-        <Modal title="Assign User Role" onClose={() => setEditEmp(null)}>
+        <Modal title="Edit Employee" onClose={() => setEditEmp(null)}>
           <form onSubmit={handleUpdateRole} className="p-6 space-y-4">
             <div className="flex items-center gap-3 p-4 bg-[#FAF7F5] rounded-xl border border-[#F0EBE6]">
               <div className="w-10 h-10 rounded-lg bg-[#D97736]/20 flex items-center justify-center text-xs font-bold text-[#D97736]">{editEmp.initials}</div>
@@ -689,19 +700,45 @@ export default function OrganizationSetupPage() {
                 <p className="text-xs text-[#9CA3AF]">{editEmp.email}</p>
               </div>
             </div>
+
             <div className="space-y-1.5">
               <label className="block text-[13px] font-medium text-[#6B7280]">System Role</label>
-              <select value={newRole} onChange={e => setNewRole(e.target.value)} className={selectCls}>
+              <select 
+                value={newRole} 
+                onChange={e => setNewRole(e.target.value)} 
+                className={selectCls}
+                disabled={isEditingSelf}
+              >
                 <option value="employee">Employee</option>
                 <option value="auditor">Auditor</option>
                 <option value="technician">Technician</option>
                 <option value="manager">Asset Manager</option>
                 <option value="admin">Administrator</option>
               </select>
+              {isEditingSelf && (
+                <p className="text-xs text-[#C85C27] font-semibold flex items-center gap-1.5 mt-1">
+                  <AlertTriangle size={12} /> You cannot change your own role.
+                </p>
+              )}
             </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[13px] font-medium text-[#6B7280]">Department</label>
+              <select 
+                value={newDepartmentId} 
+                onChange={e => setNewDepartmentId(e.target.value)} 
+                className={selectCls}
+              >
+                <option value="">Unassigned</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setEditEmp(null)} className={cancelBtnCls}>Cancel</button>
-              <button type="submit" className={saveBtnCls}>Save Role</button>
+              <button type="submit" className={saveBtnCls}>Save Changes</button>
             </div>
           </form>
         </Modal>
