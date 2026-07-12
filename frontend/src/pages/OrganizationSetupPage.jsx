@@ -8,6 +8,7 @@ import {
   createCategory,
   getEmployees,
   updateEmployeeRole,
+  deleteEmployee,
 } from '@/services/organization.service';
 import {
   ShieldAlert,
@@ -17,9 +18,9 @@ import {
   FolderOpen,
   X,
   Edit2,
-  CheckCircle,
-  XCircle,
-  AlertCircle
+  Trash2,
+  Download,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function OrganizationSetupPage() {
@@ -38,6 +39,8 @@ export default function OrganizationSetupPage() {
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [isEmpModalOpen, setIsEmpModalOpen] = useState(false);
+  const [deleteConfirmEmp, setDeleteConfirmEmp] = useState(null); // emp to delete
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Modal forms
   const [deptForm, setDeptForm] = useState({ name: '', headId: '', parentDepartmentId: '' });
@@ -186,6 +189,39 @@ export default function OrganizationSetupPage() {
     }
   };
 
+  const handleDeleteEmp = async () => {
+    if (!deleteConfirmEmp) return;
+    setIsDeleting(true);
+    try {
+      await deleteEmployee(deleteConfirmEmp.id);
+      setDeleteConfirmEmp(null);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const exportEmployeesCSV = () => {
+    const headers = ['Name', 'Email', 'Department', 'Role', 'Status'];
+    const rows = employees.map(e => [
+      e.name,
+      e.email,
+      e.departmentName || 'Unassigned',
+      e.role === 'manager' ? 'Asset Manager' : e.role === 'auditor' ? 'Auditor' : e.role === 'technician' ? 'Technician' : e.role === 'admin' ? 'Administrator' : 'Employee',
+      e.status || 'active',
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'employees.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -199,16 +235,24 @@ export default function OrganizationSetupPage() {
           </p>
         </div>
 
-        {/* Terracotta Action Button */}
-        <div>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3">
+          {activeTab === 'employees' && employees.length > 0 && (
+            <button
+              onClick={exportEmployeesCSV}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold rounded-full hover:bg-[#FAF7F5] transition-all shadow-sm"
+            >
+              <Download size={15} />
+              Export CSV
+            </button>
+          )}
           <button
             onClick={() => {
               if (activeTab === 'departments') setIsDeptModalOpen(true);
               if (activeTab === 'categories') setIsCatModalOpen(true);
               if (activeTab === 'employees') setIsEmpModalOpen(true);
             }}
-            
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all active:scale-[0.98]"
           >
             <Plus size={16} />
             Add {activeTab === 'departments' ? 'Department' : activeTab === 'categories' ? 'Category' : 'Employee'}
@@ -363,17 +407,26 @@ export default function OrganizationSetupPage() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={() => {
-                            setSelectedEmp(emp);
-                            setNewRole(emp.role);
-                            setIsRoleModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FAF7F5] hover:bg-[#F4EFEB] border border-[#E8E2DC] text-[#1E2022] text-xs font-semibold rounded-lg transition-colors"
-                        >
-                          <Edit2 size={12} />
-                          Edit Role
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedEmp(emp);
+                              setNewRole(emp.role);
+                              setIsRoleModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FAF7F5] hover:bg-[#F4EFEB] border border-[#E8E2DC] text-[#1E2022] text-xs font-semibold rounded-lg transition-colors"
+                          >
+                            <Edit2 size={12} />
+                            Edit Role
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmEmp(emp)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FFF1F0] hover:bg-[#FFE4E2] border border-[#FFC9C6] text-[#C0392B] text-xs font-semibold rounded-lg transition-colors"
+                          >
+                            <Trash2 size={12} />
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -687,6 +740,47 @@ export default function OrganizationSetupPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 flex flex-col items-center text-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                <AlertTriangle size={22} className="text-[#C0392B]" />
+              </div>
+              <div>
+                <h3 className="font-bold text-[#1E2022] text-base mb-1">Delete Employee</h3>
+                <p className="text-sm text-[#6B7280] leading-relaxed">
+                  Are you sure you want to delete{' '}
+                  <span className="font-semibold text-[#1E2022]">{deleteConfirmEmp.name}</span>?
+                  This action cannot be undone.
+                </p>
+              </div>
+              <div className="flex gap-3 w-full pt-1">
+                <button
+                  onClick={() => setDeleteConfirmEmp(null)}
+                  disabled={isDeleting}
+                  className="flex-1 h-11 rounded-xl border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold hover:bg-[#FAF7F5] transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteEmp}
+                  disabled={isDeleting}
+                  className="flex-1 h-11 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Trash2 size={14} />
+                  )}
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
