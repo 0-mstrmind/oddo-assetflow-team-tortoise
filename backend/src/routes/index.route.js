@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { healthRateLimiter } from "../core/middleware/rateLimiter.js";
 
 import authRoute from "../modules/user/user.route.js";
+import adminRoute from "../modules/admin/admin.route.js";
 import sendResponse from "../shared/utils/ApiResponse.js";
 
 /* <NEATNODE_IMPORTS> */
@@ -18,6 +19,7 @@ router.get("/health", healthRateLimiter, (req, res) => {
 });
 
 router.use("/auth", authRoute);
+router.use("/admin", adminRoute);
 
 /* <NEATNODE_ROUTES> */
 // Reserved for NeatNode file generation. Do not remove or modify.
