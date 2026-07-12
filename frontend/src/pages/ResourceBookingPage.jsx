@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import {
   getResources,
   getBookings,
@@ -28,7 +28,7 @@ const HOURS = [
 ];
 
 export default function ResourceBookingPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(s => s.user);
 
   // Data state
   const [resources, setResources] = useState([]);

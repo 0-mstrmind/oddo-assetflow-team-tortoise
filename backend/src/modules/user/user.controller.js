@@ -9,6 +9,8 @@ import {
   refreshTokenService,
   getUsersByRoleService,
   getUsersByDepartmentService,
+  verifyEmailService,
+  createEmployeeService,
 } from "./user.service.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import { setCookie } from "../../shared/utils/Token.js";
@@ -102,4 +104,18 @@ export const getUsersByDepartment = CatchAsync(async (req, res) => {
   const { deptId } = req.params;
   const users = await getUsersByDepartmentService(deptId);
   sendResponse(res, StatusCodes.OK, "Users retrieved", { users });
+});
+
+// Controller to verify email
+export const verifyEmail = CatchAsync(async (req, res) => {
+  const { token } = req.params;
+  const result = await verifyEmailService(token);
+  sendResponse(res, StatusCodes.OK, result.message);
+});
+
+// Controller for Admin to create an employee
+export const createEmployee = CatchAsync(async (req, res) => {
+  const { name, email, password, role, departmentId } = req.body;
+  const { user } = await createEmployeeService({ name, email, password, role, departmentId });
+  sendResponse(res, StatusCodes.CREATED, "Employee created successfully", { user });
 });

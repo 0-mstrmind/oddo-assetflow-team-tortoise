@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import {
   getAssets,
   getEmployees,
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function AllocationTransferPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(s => s.user);
 
   // Data lists
   const [assets, setAssets] = useState([]);

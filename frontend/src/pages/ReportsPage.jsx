@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import { getAssets, getDepartments } from '@/services/api.mock';
 import {
   BarChart3,
@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 
 export default function ReportsPage() {
-  const { user } = useAuthStore();
-  const isAuthorized = user?.role === 'admin' || user?.role === 'manager';
+  const user = useAuthStore(s => s.user);
+  const isAdmin = user?.role === 'admin';
+  const isAssetManager = user?.role === 'manager' || user?.role === 'asset_manager';
+  const isAuthorized = isAdmin || isAssetManager;
 
   const [assets, setAssets] = useState([]);
   const [departments, setDepartments] = useState([]);

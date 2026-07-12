@@ -7,8 +7,17 @@ import {
   generateRefreshToken,
 } from "../../shared/utils/Token.js";
 
-// Service to create a new user
+import crypto from 'crypto';
+import { sendVerificationEmail } from "../../shared/utils/email.service.js";
+
+// Service to create a new user (Public Registration / Workspace Init)
 export const createUserService = async ({ name, email, password }) => {
+  // Check if workspace is already initialized (only first user can be created publicly)
+  const userCount = await User.countDocuments();
+  if (userCount > 0) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Workspace already initialized. Registration is disabled. Please contact your administrator.");
+  }
+
   // Check if user exists
   const existing = await User.findOne({ email });
   if (existing) throw new ApiError(StatusCodes.CONFLICT, "User already exists");
@@ -17,11 +26,16 @@ export const createUserService = async ({ name, email, password }) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  // Create user
+  // Generate Verification Token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+
+  // Create user (first user gets 'admin' role automatically)
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
+    role: 'admin',
+    verificationToken,
   });
 
   const accessToken = generateAccessToken({
@@ -39,13 +53,55 @@ export const createUserService = async ({ name, email, password }) => {
   user.refreshToken = hashedRefreshToken;
   await user.save();
 
-  const userObj = user.toObject(); // Convert Mongoose document to plain object
-  delete userObj.password; // Remove password field
+  // Send Email in background
+  sendVerificationEmail(user.email, verificationToken).catch(console.error);
+
+  const userObj = user.toObject();
+  delete userObj.password;
+  delete userObj.verificationToken;
   delete userObj.__v;
   delete userObj.createdAt;
   delete userObj.updatedAt;
 
   return { user: userObj, accessToken, refreshToken };
+};
+
+// Service to verify email
+export const verifyEmailService = async (token) => {
+  const user = await User.findOne({ verificationToken: token });
+  if (!user) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid or expired verification token");
+  }
+
+  user.isEmailVerified = true;
+  user.verificationToken = undefined;
+  await user.save();
+
+  return { message: "Email verified successfully" };
+};
+
+// Service for Admin to create an employee
+export const createEmployeeService = async ({ name, email, password, role, departmentId }) => {
+  const existing = await User.findOne({ email });
+  if (existing) throw new ApiError(StatusCodes.CONFLICT, "User already exists");
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const user = await User.create({
+    name,
+    email,
+    password: hashedPassword,
+    role,
+    departmentId,
+    isEmailVerified: true, // employees created by admin are implicitly verified
+  });
+
+  const userObj = user.toObject();
+  delete userObj.password;
+  delete userObj.__v;
+
+  return { user: userObj };
 };
 
 // Service to login user

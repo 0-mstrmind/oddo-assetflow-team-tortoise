@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import { useSearchParams } from 'react-router-dom';
 import {
   getAssets,
@@ -25,8 +25,10 @@ import {
 } from 'lucide-react';
 
 export default function AssetDirectoryPage() {
-  const { user } = useAuthStore();
-  const canRegister = user?.role === 'admin' || user?.role === 'manager';
+  const user = useAuthStore(s => s.user);
+  const isAdmin = user?.role === 'admin';
+  const isAssetManager = user?.role === 'manager' || user?.role === 'asset_manager';
+  const canRegister = isAdmin || isAssetManager;
 
   const [searchParams, setSearchParams] = useSearchParams();
 
