@@ -12,6 +12,10 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+    companyName: {
+        type: String,
+        required: function() { return this.role === 'admin' && this.isNew; },
+    },
     password: {
         type: String,
         required: true,
@@ -31,7 +35,13 @@ const userSchema = new mongoose.Schema({
         enum: ['active', 'inactive', 'suspended'],
         default: 'active',
     },
-
+    isEmailVerified: {
+        type: Boolean,
+        default: false,
+    },
+    verificationToken: {
+        type: String,
+    },
     refreshToken: {
         type: String,
         select: true,

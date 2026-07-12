@@ -1,38 +1,76 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
-import { useAuthStore } from '@/store/useAuthStore';
+import { Eye, EyeOff, ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { useLogin, useRegister, extractMessage } from '@/hooks/useAuth';
+import { resendVerification } from '@/services/auth.service';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, isLoading, error, clearError } = useAuthStore();
+  const { mutate: login, isPending: isLoginLoading } = useLogin({
+    onError: (err) => {
+      const msg = extractMessage(err, "Login failed. Please try again.");
+      setError(msg);
+      toast.error(msg);
+    }
+  });
+  const { mutate: register, isPending: isRegisterLoading } = useRegister();
+  const isLoading = isLoginLoading || isRegisterLoading;
 
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', companyName: '' });
+  const [error, setError] = useState(null);
+  const [isResending, setIsResending] = useState(false);
+
+  const clearError = () => setError(null);
 
   const updateField = (field, value) => {
     clearError();
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      if (mode === 'signup') {
-        await signUp(form.name, form.email, form.password);
-      } else {
-        await signIn(form.email, form.password);
+    clearError();
+
+    // Frontend Validations
+    if (!form.email || !form.email.includes('@')) {
+      return setError('Please enter a valid email address.');
+    }
+    if (form.password.length < 6) {
+      return setError('Password must be at least 6 characters long.');
+    }
+
+    if (mode === 'register') {
+      if (!form.name || form.name.length < 2) {
+        return setError('Please enter your admin name.');
       }
-      navigate('/dashboard');
-    } catch {
-      // error is already set in the store
+      if (!form.companyName || form.companyName.length < 2) {
+        return setError('Please enter your company name.');
+      }
+      register({ name: form.name, email: form.email, password: form.password, companyName: form.companyName });
+    } else {
+      login({ email: form.email, password: form.password });
     }
   };
 
   const toggleMode = () => {
     clearError();
-    setMode((m) => (m === 'login' ? 'signup' : 'login'));
+    setMode((m) => (m === 'login' ? 'register' : 'login'));
+  };
+
+  const handleResendEmail = async () => {
+    if (!form.email) return;
+    setIsResending(true);
+    try {
+      const res = await resendVerification(form.email);
+      toast.success(res.message || "Verification email sent!");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to resend verification email.");
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -64,41 +102,71 @@ export default function LoginPage() {
         {/* Auth Card */}
         <div className="bg-white rounded-2xl p-8 md:p-9 shadow-[0_4px_24px_rgba(30,32,34,0.06),0_1px_4px_rgba(30,32,34,0.04)] border border-[#F0EBE6]/80">
           {/* Header */}
-          <div className="mb-7">
-            <h1 className="text-2xl font-bold text-[#1E2022] tracking-[-0.02em] mb-1.5">
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
-            </h1>
-            <p className="text-sm text-[#9CA3AF] leading-relaxed">
-              {mode === 'login'
-                ? 'Sign in to your workspace to continue.'
-                : 'Get started with AssetFlow in seconds.'}
-            </p>
+          <div className="bg-[#F9F7F5] p-1 rounded-full flex mb-8">
+            <button
+              onClick={() => setMode('login')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs font-semibold tracking-tight transition-all duration-300 ${
+                mode === 'login' 
+                  ? 'bg-[#1E2022] text-white shadow-sm' 
+                  : 'text-[#6B7280] hover:text-[#1E2022]'
+              }`}
+            >
+              <LogIn size={14} />
+              Sign In
+            </button>
+            <button
+              onClick={() => setMode('register')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full text-xs font-semibold tracking-tight transition-all duration-300 ${
+                mode === 'register' 
+                  ? 'bg-[#1E2022] text-white shadow-sm' 
+                  : 'text-[#6B7280] hover:text-[#1E2022]'
+              }`}
+            >
+              <UserPlus size={14} />
+              Initialize Company
+            </button>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name field (signup only) */}
-            {mode === 'signup' && (
-              <div className="space-y-1.5">
-                <label htmlFor="name" className="block text-[13px] font-medium text-[#6B7280]">
-                  Full Name
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => updateField('name', e.target.value)}
-                  placeholder="Sarah Mitchell"
-                  required
-                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] outline-none transition-all duration-200 focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white"
-                />
-              </div>
+            {/* Name and Company fields (register only) */}
+            {mode === 'register' && (
+              <>
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <label htmlFor="name" className="block text-[13px] font-medium text-[#6B7280]">
+                    Admin Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => updateField('name', e.target.value)}
+                    placeholder="Sarah Mitchell"
+                    required
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] outline-none transition-all duration-200 focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white"
+                  />
+                </div>
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300 delay-75">
+                  <label htmlFor="companyName" className="block text-[13px] font-medium text-[#6B7280]">
+                    Company Name
+                  </label>
+                  <input
+                    id="companyName"
+                    type="text"
+                    value={form.companyName}
+                    onChange={(e) => updateField('companyName', e.target.value)}
+                    placeholder="Acme Corp"
+                    required
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] outline-none transition-all duration-200 focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white"
+                  />
+                </div>
+              </>
             )}
 
             {/* Email */}
             <div className="space-y-1.5">
               <label htmlFor="email" className="block text-[13px] font-medium text-[#6B7280]">
-                Email Address
+                {mode === 'register' ? 'Admin Email Address' : 'Email Address'}
               </label>
               <input
                 id="email"
@@ -146,9 +214,22 @@ export default function LoginPage() {
 
             {/* Error */}
             {error && (
-              <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#C85C27]/[0.06] border border-[#C85C27]/10 rounded-xl">
-                <div className="w-1.5 h-1.5 bg-[#C85C27] rounded-full shrink-0" />
-                <p className="text-xs text-[#C85C27] font-medium">{error}</p>
+              <div className="flex flex-col gap-3 px-3.5 py-3 bg-[#C85C27]/[0.06] border border-[#C85C27]/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-[#C85C27] rounded-full shrink-0" />
+                  <p className="text-xs text-[#C85C27] font-medium">{error}</p>
+                </div>
+                {error.includes("verify your email") && (
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={isResending}
+                    className="self-start text-xs font-semibold text-white bg-[#C85C27] hover:bg-[#b04a1c] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                  >
+                    {isResending && <Loader2 size={12} className="animate-spin" />}
+                    Resend Verification Email
+                  </button>
+                )}
               </div>
             )}
 

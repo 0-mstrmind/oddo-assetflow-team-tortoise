@@ -27,13 +27,14 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.2",
     "morgan": "^1.10.1",
+    "resend": "^6.17.2",
     "winston": "^3.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
     "globals": "^15.0.0",
-    "nodemon": "^3.1.10",
-    "neatnode": "^3.4.0"
+    "neatnode": "^3.4.0",
+    "nodemon": "^3.1.10"
   }
 }

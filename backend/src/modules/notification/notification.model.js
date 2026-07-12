@@ -19,6 +19,11 @@ const notificationSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    type: {
+        type: String,
+        enum: ['alert', 'approval', 'booking', 'info'],
+        default: 'info',
+    },
 }, {
     timestamps: true,
 });
