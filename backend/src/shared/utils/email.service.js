@@ -19,7 +19,7 @@ export const sendVerificationEmail = async (toEmail, token) => {
 
   try {
     await resend.emails.send({
-      from: 'AssetFlow <onboarding@resend.dev>', // Resend testing domain
+      from: config.emailFrom,
       to: toEmail,
       subject: 'Verify your AssetFlow Admin Account',
       html: `

@@ -25,6 +25,11 @@ export const verifyEmail = async (token) => {
   return data;
 };
 
+export const resendVerification = async (email) => {
+  const { data } = await api.post(AuthEndpoints.RESEND_VERIFICATION_API, { email });
+  return data;
+};
+
 export const createEmployee = async (body) => {
   const { data } = await api.post(AuthEndpoints.CREATE_EMPLOYEE_API, body);
   return data.user;

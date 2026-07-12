@@ -10,6 +10,7 @@ import {
   getUsersByRoleService,
   getUsersByDepartmentService,
   verifyEmailService,
+  resendVerificationService,
   createEmployeeService,
 } from "./user.service.js";
 import ApiError from "../../shared/utils/ApiError.js";
@@ -19,20 +20,15 @@ import { setCookie } from "../../shared/utils/Token.js";
 export const registerUser = CatchAsync(async (req, res) => {
   const { name, email, password, companyName } = req.body;
 
-  const { user, accessToken, refreshToken } = await createUserService({
+  const { user } = await createUserService({
     name,
     email,
     password,
     companyName,
   });
 
-  setCookie(res, "accessToken", accessToken);
-  setCookie(res, "refreshToken", refreshToken);
-
-  sendResponse(res, StatusCodes.CREATED, "User created successfully", {
+  sendResponse(res, StatusCodes.CREATED, "Registration successful. Please verify your email.", {
     user,
-    accessToken,
-    refreshToken,
   });
 });
 
@@ -111,6 +107,13 @@ export const getUsersByDepartment = CatchAsync(async (req, res) => {
 export const verifyEmail = CatchAsync(async (req, res) => {
   const { token } = req.params;
   const result = await verifyEmailService(token);
+  sendResponse(res, StatusCodes.OK, result.message);
+});
+
+// Controller to resend verification email
+export const resendVerification = CatchAsync(async (req, res) => {
+  const { email } = req.body;
+  const result = await resendVerificationService(email);
   sendResponse(res, StatusCodes.OK, result.message);
 });
 

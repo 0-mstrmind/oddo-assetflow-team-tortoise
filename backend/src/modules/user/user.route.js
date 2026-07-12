@@ -12,6 +12,7 @@ import {
   getUsersByRole,
   getUsersByDepartment,
   verifyEmail,
+  resendVerification,
   createEmployee,
 } from "./user.controller.js";
 import { validateBody } from "../../core/middleware/validateRequest.middleware.js";
@@ -41,6 +42,7 @@ router.get("/department/:deptId", protect, getUsersByDepartment);
 
 // Verify Email Route (public, accessed via email link)
 router.get("/verify-email/:token", verifyEmail);
+router.post("/resend-verification", authRateLimiter, resendVerification);
 
 // Admin route to create an employee
 import { restrictTo } from "../../core/middleware/auth.middleware.js";

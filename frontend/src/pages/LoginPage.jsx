@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
-import { useLogin, useRegister } from '@/hooks/useAuth';
+import { useLogin, useRegister, extractMessage } from '@/hooks/useAuth';
+import { resendVerification } from '@/services/auth.service';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { mutate: login, isPending: isLoginLoading } = useLogin();
+  const { mutate: login, isPending: isLoginLoading } = useLogin({
+    onError: (err) => {
+      const msg = extractMessage(err, "Login failed. Please try again.");
+      setError(msg);
+      toast.error(msg);
+    }
+  });
   const { mutate: register, isPending: isRegisterLoading } = useRegister();
   const isLoading = isLoginLoading || isRegisterLoading;
 
@@ -13,6 +21,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '', companyName: '' });
   const [error, setError] = useState(null);
+  const [isResending, setIsResending] = useState(false);
 
   const clearError = () => setError(null);
 
@@ -49,6 +58,19 @@ export default function LoginPage() {
   const toggleMode = () => {
     clearError();
     setMode((m) => (m === 'login' ? 'register' : 'login'));
+  };
+
+  const handleResendEmail = async () => {
+    if (!form.email) return;
+    setIsResending(true);
+    try {
+      const res = await resendVerification(form.email);
+      toast.success(res.message || "Verification email sent!");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to resend verification email.");
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -192,9 +214,22 @@ export default function LoginPage() {
 
             {/* Error */}
             {error && (
-              <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#C85C27]/[0.06] border border-[#C85C27]/10 rounded-xl">
-                <div className="w-1.5 h-1.5 bg-[#C85C27] rounded-full shrink-0" />
-                <p className="text-xs text-[#C85C27] font-medium">{error}</p>
+              <div className="flex flex-col gap-3 px-3.5 py-3 bg-[#C85C27]/[0.06] border border-[#C85C27]/10 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-[#C85C27] rounded-full shrink-0" />
+                  <p className="text-xs text-[#C85C27] font-medium">{error}</p>
+                </div>
+                {error.includes("verify your email") && (
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={isResending}
+                    className="self-start text-xs font-semibold text-white bg-[#C85C27] hover:bg-[#b04a1c] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                  >
+                    {isResending && <Loader2 size={12} className="animate-spin" />}
+                    Resend Verification Email
+                  </button>
+                )}
               </div>
             )}
 

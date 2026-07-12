@@ -34,19 +34,6 @@ export const createUserService = async ({ name, email, password, companyName }) 
     verificationToken,
   });
 
-  const accessToken = generateAccessToken({
-    id: user._id,
-    role: user.role,
-  });
-
-  const refreshToken = generateRefreshToken({
-    id: user._id,
-    role: user.role,
-  });
-
-  const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
-
-  user.refreshToken = hashedRefreshToken;
   await user.save();
 
   // Send Email in background
@@ -74,6 +61,29 @@ export const verifyEmailService = async (token) => {
   await user.save();
 
   return { message: "Email verified successfully" };
+};
+
+// Service to resend verification email
+export const resendVerificationService = async (email) => {
+  const user = await User.findOne({ email });
+  if (!user) {
+    // Return success to avoid email enumeration
+    return { message: "If an account with that email exists, a verification link has been sent." };
+  }
+
+  if (user.isEmailVerified) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Email is already verified. Please log in.");
+  }
+
+  // Generate new token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  user.verificationToken = verificationToken;
+  await user.save();
+
+  // Send Email in background
+  sendVerificationEmail(user.email, verificationToken).catch(console.error);
+
+  return { message: "Verification email resent successfully. Please check your inbox." };
 };
 
 // Service for Admin to create an employee
@@ -110,7 +120,12 @@ export const loginUserService = async ({ email, password }) => {
   // Check password
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch)
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or Password"); // notice the capitals, can be used for testing else keep it consistent
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
+
+  // Check email verification
+  if (!user.isEmailVerified) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Please verify your email address before logging in");
+  }
 
   // Generate JWT token
   const accessToken = generateAccessToken({

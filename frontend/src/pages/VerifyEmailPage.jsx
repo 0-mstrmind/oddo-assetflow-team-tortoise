@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { verifyEmail } from '@/services/auth.service';
 import { CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react';
@@ -10,8 +10,11 @@ export default function VerifyEmailPage() {
 
   const [status, setStatus] = useState('loading'); // loading, success, error
   const [message, setMessage] = useState('');
+  const hasAttempted = React.useRef(false);
 
   useEffect(() => {
+    if (hasAttempted.current) return;
+    hasAttempted.current = true;
     if (!token) {
       setStatus('error');
       setMessage('No verification token provided.');

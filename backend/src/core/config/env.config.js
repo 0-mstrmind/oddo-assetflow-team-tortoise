@@ -27,4 +27,5 @@ export const config = {
   },
 
   resendApiKey: process.env.RESEND_API_KEY,
+  emailFrom: process.env.EMAIL_FROM || 'AssetFlow <onboarding@resend.dev>',
 };

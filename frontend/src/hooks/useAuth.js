@@ -8,7 +8,7 @@ import { toast } from "sonner";
 const PROFILE_KEY = ["auth", "me"];
 
 // Helper to extract error message from Axios response
-function extractMessage(err, fallback) {
+export function extractMessage(err, fallback) {
   return err?.response?.data?.message ?? fallback;
 }
 
@@ -36,7 +36,7 @@ export const useMe = () => {
   return query;
 };
 
-export const useLogin = () => {
+export const useLogin = (callbacks) => {
   const setUser = useAuthStore((s) => s.setUser);
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -50,7 +50,11 @@ export const useLogin = () => {
       navigate("/dashboard");
     },
     onError: (err) => {
-      toast.error(extractMessage(err, "Login failed. Please try again."));
+      if (callbacks?.onError) {
+        callbacks.onError(err);
+      } else {
+        toast.error(extractMessage(err, "Login failed. Please try again."));
+      }
     },
   });
 };
@@ -62,11 +66,10 @@ export const useRegister = () => {
 
   return useMutation({
     mutationFn: ({ name, email, password, companyName }) => register({ name, email, password, companyName }),
-    onSuccess: (user) => {
-      setUser(user);
-      qc.setQueryData(PROFILE_KEY, user);
-      toast.success("Account created successfully!");
-      navigate("/dashboard");
+    onSuccess: () => {
+      toast.success("Account created successfully! Please check your email to verify your account before logging in.", { duration: 6000 });
+      // Redirect to login view to wait for verification
+      navigate("/login");
     },
     onError: (err) => {
       toast.error(extractMessage(err, "Registration failed. Please try again."));

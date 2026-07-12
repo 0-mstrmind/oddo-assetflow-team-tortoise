@@ -6,5 +6,6 @@ export const AuthEndpoints = {
   LOGOUT_API: "/auth/logout",
   PROFILE_API: "/auth/me",
   VERIFY_EMAIL_API: "/auth/verify-email",
+  RESEND_VERIFICATION_API: "/auth/resend-verification",
   CREATE_EMPLOYEE_API: "/auth/admin/users",
 };
