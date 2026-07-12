@@ -16,6 +16,11 @@ export const getAllCycleResults = async (cycleId) => {
   return data.results || [];
 };
 
+export const getAuditReports = async () => {
+  const { data } = await api.get("/audit-reports");
+  return data.reports || [];
+};
+
 export const verifyAuditAsset = async (body) => {
   const { data } = await api.post("/audit-results", body);
   return data.result;

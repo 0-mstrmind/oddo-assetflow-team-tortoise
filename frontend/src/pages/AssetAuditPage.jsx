@@ -4,6 +4,7 @@ import {
   getAuditCycles,
   getAuditChecklist,
   getAllCycleResults,
+  getAuditReports,
   verifyAuditAsset,
   closeAuditCycle,
   createAuditCycle,
@@ -18,6 +19,7 @@ import {
   X,
   Plus,
 } from 'lucide-react';
+import { History } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AssetAuditPage() {
@@ -30,6 +32,10 @@ export default function AssetAuditPage() {
   const [activeCycle, setActiveCycle] = useState(null);
   const [auditAssets, setAuditAssets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Past audit reports
+  const [pastReports, setPastReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   // Close Audit Summary Modal
   const [summaryReport, setSummaryReport] = useState(null);
@@ -160,6 +166,9 @@ export default function AssetAuditPage() {
   useEffect(() => {
     if (isAuthorized) {
       fetchAuditData();
+      getAuditReports()
+        .then(setPastReports)
+        .catch(err => console.error('Failed to load past reports', err));
     }
   }, [isAuthorized]);
 
@@ -226,6 +235,8 @@ export default function AssetAuditPage() {
       setSummaryReport(summary);
       setIsSummaryOpen(true);
       fetchAuditData();
+      // Refresh past reports list so new one appears immediately
+      getAuditReports().then(setPastReports).catch(console.error);
     } catch (err) {
       console.error(err);
       const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
@@ -754,6 +765,111 @@ export default function AssetAuditPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ─────────────────────────────────────────────────────────────
+         PREVIOUS AUDIT REPORTS SECTION
+         ───────────────────────────────────────────────────────────── */}
+      {pastReports.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1E2022]/[0.06] flex items-center justify-center text-[#1E2022]">
+              <History size={17} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#1E2022]">Previous Audit Reports</h2>
+              <p className="text-xs text-[#9CA3AF]">{pastReports.length} completed cycle{pastReports.length !== 1 ? 's' : ''} on record</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {pastReports.map(report => (
+              <div key={report._id || report.auditCycleId} className="bg-white rounded-2xl border border-[#F0EBE6] shadow-[0_1px_4px_rgba(30,32,34,0.03)] overflow-hidden">
+                {/* Report Header */}
+                <button
+                  onClick={() => setSelectedReport(selectedReport === (report._id || report.auditCycleId) ? null : (report._id || report.auditCycleId))}
+                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#FAF7F5]/50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-9 h-9 rounded-xl bg-[#1E4620]/[0.08] flex items-center justify-center shrink-0">
+                      <FileSpreadsheet size={16} className="text-[#1E4620]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#1E2022]">{report.cycleName}</p>
+                      <p className="text-xs text-[#9CA3AF] mt-0.5">
+                        {report.scope ? `Scope: ${report.scope} · ` : ''}
+                        Closed {new Date(report.closedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stats chips */}
+                  <div className="hidden sm:flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-1 rounded-full bg-[#1E4620]/[0.08] text-[#1E4620] text-[11px] font-bold">{report.stats.verified} Verified</span>
+                    {report.stats.missing > 0 && <span className="px-2.5 py-1 rounded-full bg-[#C85C27]/[0.08] text-[#C85C27] text-[11px] font-bold">{report.stats.missing} Missing</span>}
+                    {report.stats.damaged > 0 && <span className="px-2.5 py-1 rounded-full bg-[#D49B28]/[0.08] text-[#D49B28] text-[11px] font-bold">{report.stats.damaged} Damaged</span>}
+                    {report.stats.misplaced > 0 && <span className="px-2.5 py-1 rounded-full bg-[#6B7280]/[0.08] text-[#6B7280] text-[11px] font-bold">{report.stats.misplaced} Misplaced</span>}
+                    <span className="text-xs text-[#9CA3AF] ml-1">{selectedReport === (report._id || report.auditCycleId) ? '▲' : '▼'}</span>
+                  </div>
+                </button>
+
+                {/* Expanded detail panel */}
+                {selectedReport === (report._id || report.auditCycleId) && (
+                  <div className="border-t border-[#F0EBE6] px-6 py-5 space-y-4">
+                    {/* Summary stats grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {[
+                        { label: 'Total', value: report.stats.total, color: '#1E2022' },
+                        { label: 'Verified', value: report.stats.verified, color: '#1E4620' },
+                        { label: 'Missing', value: report.stats.missing, color: '#C85C27' },
+                        { label: 'Damaged', value: report.stats.damaged, color: '#D49B28' },
+                        { label: 'Pending', value: report.stats.pending, color: '#9CA3AF' },
+                      ].map(s => (
+                        <div key={s.label} className="bg-[#FAF7F5] border border-[#F0EBE6] rounded-xl p-3 text-center">
+                          <p className="text-lg font-bold" style={{ color: s.color }}>{s.value}</p>
+                          <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Discrepancies table */}
+                    <div>
+                      <h4 className="text-xs font-bold text-[#1E2022] uppercase tracking-wider mb-2">Discrepancy Details</h4>
+                      {report.discrepancies.length === 0 ? (
+                        <p className="text-xs text-[#9CA3AF] py-4 text-center bg-[#FAF7F5] rounded-xl border border-[#F0EBE6]">
+                          ✅ No discrepancies — all assets were verified.
+                        </p>
+                      ) : (
+                        <div className="border border-[#F0EBE6] rounded-xl overflow-hidden divide-y divide-[#F0EBE6]">
+                          {report.discrepancies.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-4 py-3 bg-white hover:bg-[#FAF7F5]/50 text-xs">
+                              <div>
+                                <p className="font-bold text-[#1E2022]">{item.assetName || '—'}</p>
+                                <p className="text-[#9CA3AF] font-mono mt-0.5">
+                                  {item.assetTag || '—'}{item.location ? ` · ${item.location}` : ''}
+                                </p>
+                                {item.condition && <p className="text-[#6B7280] mt-0.5">Condition: <span className="font-semibold capitalize">{item.condition}</span></p>}
+                                {item.remarks && <p className="text-[#6B7280] mt-0.5 italic">"{item.remarks}"</p>}
+                              </div>
+                              <span className={`ml-4 px-2.5 py-1 rounded-full font-bold uppercase text-[9px] shrink-0 ${
+                                item.status === 'missing'
+                                  ? 'bg-[#C85C27]/10 text-[#C85C27]'
+                                  : item.status === 'damaged'
+                                  ? 'bg-[#D49B28]/10 text-[#D49B28]'
+                                  : 'bg-[#6B7280]/10 text-[#6B7280]'
+                              }`}>
+                                {item.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}

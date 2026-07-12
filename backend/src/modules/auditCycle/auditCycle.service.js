@@ -1,6 +1,7 @@
 import AuditCycle from "./auditCycle.model.js";
 import AuditResult from "../auditResult/auditResult.model.js";
 import Asset from "../asset/asset.model.js";
+import { saveAuditReport } from "../auditReport/auditReport.service.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 
@@ -20,15 +21,35 @@ export const closeAuditCycle = async (id) => {
     cycle.status = 'completed';
     await cycle.save();
 
-    // When closing, update affected asset statuses based on discrepancies
-    const results = await AuditResult.find({ auditCycleId: id });
+    // Fetch results with populated asset details
+    const results = await AuditResult.find({ auditCycleId: id }).populate('assetId').lean();
+
+    // Update asset statuses based on discrepancies
     for (const result of results) {
         if (result.status === 'missing') {
-            await Asset.findByIdAndUpdate(result.assetId, { status: 'lost' });
+            await Asset.findByIdAndUpdate(result.assetId?._id || result.assetId, { status: 'lost' });
         } else if (result.status === 'damaged') {
-            await Asset.findByIdAndUpdate(result.assetId, { condition: 'damaged' });
+            await Asset.findByIdAndUpdate(result.assetId?._id || result.assetId, { condition: 'damaged' });
         }
     }
+
+    // Build report snapshot and persist it
+    const reportResults = results.map(r => ({
+        assetId: r.assetId?._id || r.assetId,
+        assetTag: r.assetId?.assetTag || '',
+        assetName: r.assetId?.name || '',
+        location: r.assetId?.location || '',
+        status: r.status,
+        condition: r.condition || '',
+        remarks: r.remarks || '',
+    }));
+
+    await saveAuditReport({
+        auditCycleId: id,
+        cycleName: cycle.name,
+        scope: cycle.scope || '',
+        results: reportResults,
+    });
 
     return cycle;
 };
