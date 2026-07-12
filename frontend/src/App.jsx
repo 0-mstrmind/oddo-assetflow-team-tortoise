@@ -2,6 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from '@/pages/LandingPage';
 import LoginPage from '@/pages/LoginPage';
 import DashboardPage from '@/pages/DashboardPage';
+import OrganizationSetupPage from '@/pages/OrganizationSetupPage';
+import AssetDirectoryPage from '@/pages/AssetDirectoryPage';
+import AllocationTransferPage from '@/pages/AllocationTransferPage';
+import ResourceBookingPage from '@/pages/ResourceBookingPage';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
@@ -22,13 +26,56 @@ function App() {
           }
         >
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route
+            path="/organization"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <OrganizationSetupPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/assets"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head', 'employee']}>
+                <AssetDirectoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/allocation"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head']}>
+                <AllocationTransferPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/allocations"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head']}>
+                <AllocationTransferPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/booking"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head', 'employee']}>
+                <ResourceBookingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head', 'employee']}>
+                <ResourceBookingPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Placeholder routes for future screens */}
-          <Route path="/organization" element={<PlaceholderPage title="Organization Setup" />} />
-          <Route path="/assets" element={<PlaceholderPage title="Assets" />} />
-          <Route path="/assets/register" element={<PlaceholderPage title="Register Asset" />} />
-          <Route path="/allocations" element={<PlaceholderPage title="Allocation & Transfer" />} />
-          <Route path="/bookings" element={<PlaceholderPage title="Resource Booking" />} />
           <Route path="/bookings/new" element={<PlaceholderPage title="New Booking" />} />
           <Route path="/maintenance" element={<PlaceholderPage title="Maintenance" />} />
           <Route path="/audit" element={<PlaceholderPage title="Audit" />} />

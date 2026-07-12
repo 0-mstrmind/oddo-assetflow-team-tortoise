@@ -20,6 +20,18 @@ const ICON_MAP = {
   'bell': Bell,
 };
 
+const ROLE_RULES = {
+  dashboard: ['admin', 'manager', 'department_head', 'employee', 'auditor', 'technician'],
+  organization: ['admin'],
+  assets: ['admin', 'manager', 'department_head', 'employee'],
+  allocation: ['admin', 'manager', 'department_head'],
+  booking: ['admin', 'manager', 'department_head', 'employee'],
+  maintenance: ['admin', 'manager', 'technician'],
+  audit: ['admin', 'manager', 'auditor'],
+  reports: ['admin', 'manager'],
+  notifications: ['admin', 'manager', 'department_head', 'employee'],
+};
+
 export default function Sidebar({ collapsed, onToggle }) {
   const [navItems, setNavItems] = useState([]);
   const location = useLocation();
@@ -28,6 +40,13 @@ export default function Sidebar({ collapsed, onToggle }) {
   useEffect(() => {
     getNavigationItems().then(setNavItems);
   }, []);
+
+  // Filter items by current user's role
+  const visibleItems = navItems.filter((item) => {
+    const allowed = ROLE_RULES[item.id];
+    if (!allowed) return true; // Default allow if not configured
+    return user && allowed.includes(user.role);
+  });
 
   return (
     <aside
@@ -56,7 +75,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* ── Navigation ── */}
       <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5 scrollbar-none">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = ICON_MAP[item.icon] || Package;
           const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
 
@@ -121,7 +140,19 @@ export default function Sidebar({ collapsed, onToggle }) {
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-white/80 truncate">{user?.name || 'User'}</p>
-              <p className="text-[10px] text-white/30 truncate">{user?.department || ''}</p>
+              <select
+                value={user?.role || ''}
+                onChange={(e) => {
+                  const { setMockRole } = useAuthStore.getState();
+                  setMockRole(e.target.value);
+                }}
+                className="block w-full mt-1 px-1 py-0.5 bg-[#2D3135] border border-white/10 rounded text-[10px] text-white/60 focus:outline-none focus:border-[#D97736]"
+              >
+                <option value="admin">Admin</option>
+                <option value="manager">Asset Manager</option>
+                <option value="department_head">Dept Head</option>
+                <option value="employee">Employee</option>
+              </select>
             </div>
           )}
           {!collapsed && (
