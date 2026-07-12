@@ -9,13 +9,16 @@ export const api = axios.create({
   },
 });
 
+import { useAuthStore } from "../store/auth.store.js";
+
 // Add interceptors if needed (e.g., for logging or generic error handling)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     // We can handle global 401 Unauthorized errors here
     if (error.response?.status === 401) {
-      // e.g. trigger a global logout or redirect to login
+      // Trigger a global logout to clear stale sessions
+      useAuthStore.getState().clearUser();
     }
     return Promise.reject(error);
   }

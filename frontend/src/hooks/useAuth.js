@@ -14,6 +14,7 @@ export function extractMessage(err, fallback) {
 
 export const useMe = () => {
   const setUser = useAuthStore((s) => s.setUser);
+  const clearUser = useAuthStore((s) => s.clearUser);
   const setHydrated = useAuthStore((s) => s.setHydrated);
 
   const query = useQuery({
@@ -28,10 +29,13 @@ export const useMe = () => {
   });
 
   useEffect(() => {
+    if (query.isError) {
+      clearUser();
+    }
     if (query.isSuccess || query.isError) {
       setHydrated();
     }
-  }, [query.isSuccess, query.isError, setHydrated]);
+  }, [query.isSuccess, query.isError, clearUser, setHydrated]);
 
   return query;
 };
