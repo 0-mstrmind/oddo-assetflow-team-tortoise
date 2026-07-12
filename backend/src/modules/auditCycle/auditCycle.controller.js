@@ -18,3 +18,15 @@ export const getCycles = CatchAsync(async (req, res) => {
     const cycles = await auditCycleService.getAuditCycles(req.query);
     sendResponse(res, StatusCodes.OK, "Audit cycles retrieved", { cycles });
 });
+
+export const startCycle = CatchAsync(async (req, res) => {
+    const { id } = req.params;
+    const cycle = await auditCycleService.startAuditCycle(id);
+    sendResponse(res, StatusCodes.OK, "Audit cycle started", { cycle });
+});
+
+export const getChecklist = CatchAsync(async (req, res) => {
+    const { id } = req.params;
+    const checklistData = await auditCycleService.generateAuditChecklist(id);
+    sendResponse(res, StatusCodes.OK, "Audit checklist generated", { checklist: checklistData });
+});
