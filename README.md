@@ -50,7 +50,7 @@ AssetFlow employs a hybrid data access strategy. We prioritize **high-read throu
 ```mermaid
 graph TD
     subgraph Frontend [Presentation & State Layer]
-        A[Next.js / Vite Client] -->|Triggers Actions| B[Zustand State Store]
+        A[React.js / Vite Client] -->|Triggers Actions| B[Zustand State Store]
         B -->|Encapsulates API Calls| C[Axios HTTP Client]
     end
 
@@ -211,6 +211,10 @@ NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 JWT_ACCESS_SECRET=your_super_secret_access_key
 JWT_REFRESH_SECRET=your_super_secret_refresh_key
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+RESEND_API_KEY=
+EMAIL_FROM=""
 ```
 
 Create a `.env` file in the `frontend/` directory:
