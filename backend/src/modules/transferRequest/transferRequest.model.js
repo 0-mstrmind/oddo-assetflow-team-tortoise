@@ -9,7 +9,7 @@ const transferRequestSchema = new mongoose.Schema({
     fromEmployeeId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "user",
-        required: true,
+        // Optional because if null, it implies an allocation request for an available asset
     },
     toEmployeeId: {
         type: mongoose.Schema.Types.ObjectId,

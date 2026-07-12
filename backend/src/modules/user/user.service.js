@@ -46,6 +46,20 @@ export const createUserService = async ({ name, email, password, companyName }) 
   delete userObj.createdAt;
   delete userObj.updatedAt;
 
+  const accessToken = generateAccessToken({
+    id: user._id,
+    role: user.role,
+  });
+
+  const refreshToken = generateRefreshToken({
+    id: user._id,
+    role: user.role,
+  });
+
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
+  user.refreshToken = hashedRefreshToken;
+  await user.save();
+
   return { user: userObj, accessToken, refreshToken };
 };
 

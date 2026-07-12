@@ -4,28 +4,37 @@ import CatchAsync from "../../shared/utils/CatchAsync.js";
 import * as transferService from "./transferRequest.service.js";
 
 export const requestTransfer = CatchAsync(async (req, res) => {
-    const { assetId, toEmployeeId, reason } = req.body;
-    const fromEmployeeId = req.user.id;
+    const { assetId, reason, toEmployeeId } = req.body;
+    const requestedBy = req.user.userid;
+    // If toEmployeeId not provided, the requester is requesting the asset for themselves
+    const targetEmployeeId = toEmployeeId || requestedBy;
     
-    const transfer = await transferService.requestTransferService(assetId, fromEmployeeId, toEmployeeId, reason);
-    sendResponse(res, StatusCodes.CREATED, "Transfer requested successfully", { transfer });
+    const transfer = await transferService.requestTransferService(assetId, targetEmployeeId, requestedBy, reason);
+    sendResponse(res, StatusCodes.CREATED, "Asset request submitted successfully", { transfer });
 });
 
 export const updateTransferStatus = CatchAsync(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
-    const approvedBy = req.user.id;
+    const approvedBy = req.user.userid;
     
     const transfer = await transferService.approveOrRejectTransferService(id, status, approvedBy);
     sendResponse(res, StatusCodes.OK, `Transfer ${status}`, { transfer });
 });
 
 export const getMyTransfers = CatchAsync(async (req, res) => {
-    const userId = req.user.id;
+    const userId = req.user.userid;
     const transfers = await transferService.getAllTransfersService({ 
         $or: [{ fromEmployeeId: userId }, { toEmployeeId: userId }] 
     });
     sendResponse(res, StatusCodes.OK, "Transfers retrieved", { transfers });
+});
+
+// Returns only requests made BY the current user (for employee dashboard)
+export const getMyRequests = CatchAsync(async (req, res) => {
+    const userId = req.user.userid;
+    const transfers = await transferService.getAllTransfersService({ requestedBy: userId });
+    sendResponse(res, StatusCodes.OK, "My requests retrieved", { transfers });
 });
 
 export const getAllTransfers = CatchAsync(async (req, res) => {

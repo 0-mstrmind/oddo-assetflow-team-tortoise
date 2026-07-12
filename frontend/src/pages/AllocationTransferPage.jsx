@@ -22,6 +22,7 @@ import {
 
 export default function AllocationTransferPage() {
   const user = useAuthStore(s => s.user);
+  const isEmployeeView = user?.role === 'employee';
 
   // Data lists
   const [assets, setAssets] = useState([]);
@@ -144,14 +145,17 @@ export default function AllocationTransferPage() {
 
   const handleTransfer = async (e) => {
     e.preventDefault();
-    if (!selectedAssetId || !transferToId || !transferReason) return;
+    
+    const finalToId = isEmployeeView ? (user?.id || user?._id) : transferToId;
+    if (!selectedAssetId || (!finalToId) || !transferReason) return;
+    
     setIsSubmitLoading(true);
     setTransferSuccessMsg('');
 
     try {
       const payload = {
         assetId: selectedAssetId,
-        toEmployeeId: transferToId,
+        toEmployeeId: finalToId,
         reason: transferReason,
       };
 
@@ -174,10 +178,12 @@ export default function AllocationTransferPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl md:text-[1.75rem] font-bold text-[#1E2022] tracking-[-0.02em] mb-1">
-          Asset Allocation & Transfer
+          {isEmployeeView ? 'Request Assets' : 'Asset Allocation & Transfer'}
         </h1>
         <p className="text-sm text-[#9CA3AF] font-medium">
-          Allocate equipment to employees or initiate transfer requests for already assigned assets.
+          {isEmployeeView 
+            ? 'Request an available asset or request a transfer for an assigned asset.' 
+            : 'Allocate equipment to employees or initiate transfer requests for already assigned assets.'}
         </p>
       </div>
 
@@ -194,11 +200,11 @@ export default function AllocationTransferPage() {
           {/* Form Side (2 Columns on Large Screens) */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Core Allocation Card */}
+            {/* Core Selection Card */}
             <div className="bg-white rounded-2xl p-6 border border-[#F0EBE6] shadow-[0_1px_4px_rgba(30,32,34,0.03)]">
               <h2 className="text-base font-bold text-[#1E2022] mb-5 flex items-center gap-2">
                 <ArrowRightLeft size={18} className="text-[#D97736]" />
-                Allocate Asset
+                {isEmployeeView ? 'Select Asset' : 'Allocate Asset'}
               </h2>
 
               <form onSubmit={handleAllocate} className="space-y-5">
@@ -247,8 +253,8 @@ export default function AllocationTransferPage() {
                   </div>
                 )}
 
-                {/* Allocation Fields (Only enabled/visible if asset is NOT allocated) */}
-                {!isAssetAllocated && (
+                {/* Allocation Fields (Only enabled/visible if asset is NOT allocated AND not employee view) */}
+                {!isAssetAllocated && !isEmployeeView && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     {/* Assignee */}
                     <div className="space-y-1.5">
@@ -294,15 +300,17 @@ export default function AllocationTransferPage() {
               </form>
             </div>
 
-            {/* Conditionally Render Transfer Request Form if Asset is Blocked */}
-            {isAssetAllocated && (
+            {/* Conditionally Render Transfer Request Form if Asset is Blocked OR if it's Employee View */}
+            {(selectedAssetId && (isAssetAllocated || isEmployeeView)) && (
               <div className="bg-white rounded-2xl p-6 border border-[#F0EBE6] shadow-[0_1px_4px_rgba(30,32,34,0.03)] animate-in slide-in-from-bottom-2 duration-300">
                 <h2 className="text-base font-bold text-[#1E2022] mb-1.5 flex items-center gap-2">
                   <ArrowRightLeft size={18} className="text-[#D97736]" />
-                  Raise Transfer Request
+                  {isEmployeeView && !isAssetAllocated ? 'Request Asset' : 'Raise Transfer Request'}
                 </h2>
                 <p className="text-xs text-[#9CA3AF] mb-5">
-                  Request transfer of {selectedAsset?.name} from {currentHolderName} to another user.
+                  {isEmployeeView && !isAssetAllocated
+                    ? `Submit a request to be allocated ${selectedAsset?.name || 'this asset'}.`
+                    : `Request transfer of ${selectedAsset?.name || 'this asset'} from ${currentHolderName} to another user.`}
                 </p>
 
                 {transferSuccessMsg && (
@@ -313,21 +321,23 @@ export default function AllocationTransferPage() {
                 )}
 
                 <form onSubmit={handleTransfer} className="space-y-4">
-                  {/* Transfer To Employee */}
-                  <div className="space-y-1.5">
-                    <label className="block text-[13px] font-medium text-[#6B7280]">Transfer To Employee</label>
-                    <select
-                      value={transferToId}
-                      onChange={(e) => setTransferToId(e.target.value)}
-                      required
-                      className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] outline-none focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white transition-all"
-                    >
-                      <option value="">Select Target Assignee</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>{emp.name} ({emp.departmentName})</option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Transfer To Employee (Hidden for employees as they request for themselves) */}
+                  {!isEmployeeView && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[13px] font-medium text-[#6B7280]">Transfer To Employee</label>
+                      <select
+                        value={transferToId}
+                        onChange={(e) => setTransferToId(e.target.value)}
+                        required
+                        className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] outline-none focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white transition-all"
+                      >
+                        <option value="">Select Target Assignee</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>{emp.name} ({emp.departmentName})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Transfer Reason */}
                   <div className="space-y-1.5">
@@ -345,9 +355,9 @@ export default function AllocationTransferPage() {
                   <button
                     type="submit"
                     disabled={isSubmitLoading}
-                    className="w-full h-11 bg-[#D97736] text-white text-sm font-semibold rounded-xl hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all active:scale-[0.99]"
+                    className="w-full h-11 bg-[#D97736] text-white text-sm font-semibold rounded-xl hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Submit Transfer Request
+                    {isEmployeeView && !isAssetAllocated ? 'Submit Request' : 'Submit Transfer Request'}
                   </button>
                 </form>
               </div>

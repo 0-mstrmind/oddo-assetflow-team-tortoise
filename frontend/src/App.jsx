@@ -5,6 +5,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import OrganizationSetupPage from '@/pages/OrganizationSetupPage';
 import AssetDirectoryPage from '@/pages/AssetDirectoryPage';
 import AllocationTransferPage from '@/pages/AllocationTransferPage';
+import RequestAssetsPage from '@/pages/RequestAssetsPage';
 import ResourceBookingPage from '@/pages/ResourceBookingPage';
 import MaintenanceKanbanPage from '@/pages/MaintenanceKanbanPage';
 import AssetAuditPage from '@/pages/AssetAuditPage';
@@ -83,6 +84,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'manager', 'department_head']}>
                 <AllocationTransferPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/requests"
+            element={
+              <ProtectedRoute allowedRoles={['employee', 'admin', 'manager', 'department_head', 'auditor', 'technician']}>
+                <RequestAssetsPage />
               </ProtectedRoute>
             }
           />

@@ -25,6 +25,7 @@ const NAVIGATION_ITEMS = [
   { id: 'organization',   label: 'Organization Setup',    icon: 'building-2',       href: '/organization' },
   { id: 'assets',         label: 'Assets',                icon: 'package',          href: '/assets' },
   { id: 'allocation',     label: 'Allocation & Transfer', icon: 'arrow-right-left', href: '/allocations' },
+  { id: 'requests',       label: 'Request Assets',        icon: 'arrow-right-left', href: '/requests' },
   { id: 'booking',        label: 'Resource Booking',      icon: 'calendar-clock',   href: '/bookings' },
   { id: 'maintenance',    label: 'Maintenance',           icon: 'wrench',           href: '/maintenance' },
   { id: 'audit',          label: 'Audit',                 icon: 'clipboard-check',  href: '/audit' },
@@ -37,6 +38,7 @@ const ROLE_RULES = {
   organization: ['admin'],
   assets: ['admin', 'manager', 'department_head', 'employee'],
   allocation: ['admin', 'manager', 'department_head'],
+  requests: ['employee'], // Employees see 'Request Assets' instead of 'Allocation & Transfer'
   booking: ['admin', 'manager', 'department_head', 'employee'],
   maintenance: ['admin', 'manager', 'technician'],
   audit: ['admin', 'manager', 'auditor'],

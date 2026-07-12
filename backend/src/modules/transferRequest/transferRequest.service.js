@@ -4,20 +4,26 @@ import Asset from "../asset/asset.model.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import { StatusCodes } from "http-status-codes";
 
-export const requestTransferService = async (assetId, fromEmployeeId, toEmployeeId, reason) => {
+export const requestTransferService = async (assetId, toEmployeeId, requestedBy, reason) => {
     const asset = await Asset.findById(assetId);
     if (!asset) throw new ApiError(StatusCodes.NOT_FOUND, "Asset not found");
 
-    const currentAllocation = await AssetAllocation.findOne({ assetId, employeeId: fromEmployeeId, status: { $in: ['active', 'overdue'] } });
-    if (!currentAllocation) {
-        throw new ApiError(StatusCodes.BAD_REQUEST, "You cannot transfer an asset that is not currently allocated to you.");
+    // Auto-detect the current holder (fromEmployeeId)
+    const currentAllocation = await AssetAllocation.findOne({ assetId, status: { $in: ['active', 'overdue'] } });
+    
+    // If there is an active allocation, fromEmployeeId is the current holder
+    // If there isn't, fromEmployeeId is null (representing a request for a new available asset)
+    const fromEmployeeId = currentAllocation ? currentAllocation.employeeId : null;
+
+    if (fromEmployeeId && fromEmployeeId.toString() === toEmployeeId.toString()) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, "You cannot request an asset that is already allocated to you.");
     }
 
     const transfer = new TransferRequest({
         assetId,
         fromEmployeeId,
         toEmployeeId,
-        requestedBy: fromEmployeeId,
+        requestedBy,
         reason
     });
     return await transfer.save();

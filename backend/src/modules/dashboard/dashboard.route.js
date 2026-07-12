@@ -4,9 +4,8 @@ import { getDashboardMetrics } from "./dashboard.controller.js";
 
 const router = express.Router();
 
-// Enforce auth and admin access for all dashboard routes
+// Enforce auth access for all dashboard routes
 router.use(protect);
-router.use(restrictTo("admin"));
 
 // Retrieve aggregated metrics for the dashboard
 router.get("/metrics", getDashboardMetrics);
