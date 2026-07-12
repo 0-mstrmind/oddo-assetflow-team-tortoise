@@ -10,6 +10,7 @@ import ResourceBookingPage from '@/pages/ResourceBookingPage';
 import MaintenanceKanbanPage from '@/pages/MaintenanceKanbanPage';
 import AssetAuditPage from '@/pages/AssetAuditPage';
 import ReportsPage from '@/pages/ReportsPage';
+import AuditorSection from '@/pages/AuditorSection';
 import NotificationsPage from '@/pages/NotificationsPage';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -122,8 +123,16 @@ function App() {
           <Route
             path="/audit"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'manager']}>
+              <ProtectedRoute allowedRoles={['admin', 'manager', 'auditor']}>
                 <AssetAuditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/auditor-section"
+            element={
+              <ProtectedRoute allowedRoles={['auditor']}>
+                <AuditorSection />
               </ProtectedRoute>
             }
           />

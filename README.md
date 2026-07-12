@@ -8,7 +8,15 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
 Live Demo: **[Live Demo URL]**  
-Backend REST API: **[Backend API URL]**
+
+<div align="center">
+  <strong>Quick Navigate:</strong><br>
+  <a href="#1-the-vision--problem-solved">Vision</a> &nbsp;|&nbsp; 
+  <a href="#2-core-features-the-wow-factor">Core Features</a> &nbsp;|&nbsp; 
+  <a href="#3-system-architecture">Architecture & DB</a> &nbsp;|&nbsp; 
+  <a href="#5-api-endpoints-reference">API Documentation</a> &nbsp;|&nbsp; 
+  <a href="#6-local-setup--running">Local Setup & Env</a>
+</div>
 
 ---
 
@@ -38,9 +46,6 @@ Secured at both the routing level and state layers, AssetFlow supports five dist
 ### 📋 Drag-and-Drop Maintenance Kanban
 Visual ticket tracking for repairs. Tickets flow seamlessly through custom lanes (**Pending**, **Approved**, **In Progress**, **Resolved**, and **Cancelled**). State changes trigger automated updates and re-assign asset status (e.g., transition to `maintenance` or back to `available`).
 
-### 🚀 "One-Click" Demo Mode
-Designed specifically for hackathon evaluators. A custom state-interception layer allows you to instantly populate the application with rich, simulated mock assets, categories, users, and allocations directly in the browser—all without running command-line seeding scripts or manual entry.
-
 ---
 
 ## 3. System Architecture
@@ -50,7 +55,7 @@ AssetFlow employs a hybrid data access strategy. We prioritize **high-read throu
 ```mermaid
 graph TD
     subgraph Frontend [Presentation & State Layer]
-        A[Next.js / Vite Client] -->|Triggers Actions| B[Zustand State Store]
+        A[React.js / Vite Client] -->|Triggers Actions| B[Zustand State Store]
         B -->|Encapsulates API Calls| C[Axios HTTP Client]
     end
 
@@ -211,6 +216,10 @@ NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 JWT_ACCESS_SECRET=your_super_secret_access_key
 JWT_REFRESH_SECRET=your_super_secret_refresh_key
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+RESEND_API_KEY=
+EMAIL_FROM=""
 ```
 
 Create a `.env` file in the `frontend/` directory:

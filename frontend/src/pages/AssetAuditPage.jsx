@@ -3,30 +3,39 @@ import { useAuthStore } from '@/store/auth.store';
 import {
   getAuditCycles,
   getAuditChecklist,
+  getAllCycleResults,
+  getAuditReports,
   verifyAuditAsset,
   closeAuditCycle,
   createAuditCycle,
   startAuditCycle,
 } from '@/services/audit.service';
+import { getAssets } from '@/services/asset.service';
 import {
   ClipboardCheck,
   ShieldAlert,
   AlertTriangle,
   FileSpreadsheet,
   X,
-  Trash2,
+  Plus,
 } from 'lucide-react';
+import { History } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AssetAuditPage() {
   const user = useAuthStore(s => s.user);
   const isAdmin = user?.role === 'admin';
   const isAssetManager = user?.role === 'manager' || user?.role === 'asset_manager';
-  const isAuthorized = isAdmin || isAssetManager;
+  const isAuditor = user?.role === 'auditor';
+  const isAuthorized = isAdmin || isAssetManager || isAuditor;
 
   const [activeCycle, setActiveCycle] = useState(null);
   const [auditAssets, setAuditAssets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Past audit reports
+  const [pastReports, setPastReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   // Close Audit Summary Modal
   const [summaryReport, setSummaryReport] = useState(null);
@@ -42,6 +51,57 @@ export default function AssetAuditPage() {
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   });
 
+  // Add Audit Record Modal
+  const [isAddRecordOpen, setIsAddRecordOpen] = useState(false);
+  const [isAddingRecord, setIsAddingRecord] = useState(false);
+  const [assetsList, setAssetsList] = useState([]);
+  const [recordForm, setRecordForm] = useState({
+    assetId: '',
+    status: 'verified',
+    condition: '',
+    remarks: '',
+  });
+
+  const openAddRecord = async () => {
+    setRecordForm({ assetId: '', status: 'verified', condition: '', remarks: '' });
+    try {
+      const assets = await getAssets();
+      setAssetsList(assets);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load assets list');
+    }
+    setIsAddRecordOpen(true);
+  };
+
+  const handleAddRecord = async (e) => {
+    e.preventDefault();
+    if (!activeCycle) return;
+    if (!recordForm.assetId) {
+      toast.error('Please select an asset');
+      return;
+    }
+    setIsAddingRecord(true);
+    try {
+      await verifyAuditAsset({
+        auditCycleId: activeCycle.id,
+        assetId: recordForm.assetId,
+        status: recordForm.status,
+        remarks: recordForm.remarks || undefined,
+        ...(recordForm.condition ? { condition: recordForm.condition } : {}),
+      });
+      toast.success('Audit record added successfully');
+      setIsAddRecordOpen(false);
+      fetchAuditData();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
+      toast.error(msg);
+    } finally {
+      setIsAddingRecord(false);
+    }
+  };
+
   const fetchAuditData = async () => {
     setIsLoading(true);
     try {
@@ -50,15 +110,46 @@ export default function AssetAuditPage() {
       if (active) {
         const activeWithId = { ...active, id: active._id || active.id };
         setActiveCycle(activeWithId);
-        const checklistData = await getAuditChecklist(activeWithId.id);
-        const list = (checklistData.checklist || []).map(item => ({
-          id: item.asset._id || item.asset.id,
-          assetTag: item.asset.assetTag,
-          name: item.asset.name,
-          expectedLocation: item.asset.location || 'HQ',
-          status: item.auditResult?.status || 'pending',
-        }));
-        setAuditAssets(list);
+
+        // Fetch checklist (scope-filtered assets) + all audit results in parallel
+        const [checklistData, rawResults] = await Promise.all([
+          getAuditChecklist(activeWithId.id),
+          getAllCycleResults(activeWithId.id).catch(() => []),
+        ]);
+
+        // Build map from checklist items
+        const itemMap = {};
+        (checklistData.checklist || []).forEach(item => {
+          const id = item.asset._id || item.asset.id;
+          itemMap[id] = {
+            id,
+            assetTag: item.asset.assetTag,
+            name: item.asset.name,
+            expectedLocation: item.asset.location || 'HQ',
+            status: item.auditResult?.status || 'pending',
+            remarks: item.auditResult?.remarks || '',
+            condition: item.auditResult?.condition || '',
+          };
+        });
+
+        // Merge in any extra results whose assets weren't in the checklist scope
+        rawResults.forEach(result => {
+          const assetId = result.assetId?._id || result.assetId?.id || result.assetId;
+          const assetObj = result.assetId;
+          if (assetId && !itemMap[assetId]) {
+            itemMap[assetId] = {
+              id: assetId,
+              assetTag: typeof assetObj === 'object' ? assetObj.assetTag : '',
+              name: typeof assetObj === 'object' ? assetObj.name : assetId,
+              expectedLocation: typeof assetObj === 'object' ? (assetObj.location || 'HQ') : 'HQ',
+              status: result.status || 'pending',
+              remarks: result.remarks || '',
+              condition: result.condition || '',
+            };
+          }
+        });
+
+        setAuditAssets(Object.values(itemMap));
       } else {
         setActiveCycle(null);
         setAuditAssets([]);
@@ -71,9 +162,13 @@ export default function AssetAuditPage() {
     }
   };
 
+
   useEffect(() => {
     if (isAuthorized) {
       fetchAuditData();
+      getAuditReports()
+        .then(setPastReports)
+        .catch(err => console.error('Failed to load past reports', err));
     }
   }, [isAuthorized]);
 
@@ -86,7 +181,7 @@ export default function AssetAuditPage() {
         </div>
         <h1 className="text-2xl font-bold text-[#1E2022] tracking-tight mb-2">Access Denied</h1>
         <p className="text-sm text-[#9CA3AF] text-center max-w-sm mb-6 leading-relaxed">
-          The Audit module is strictly restricted to Administrators and Asset Managers.
+          The Audit module is restricted to Administrators, Asset Managers, and Auditors.
         </p>
         <a
           href="/dashboard"
@@ -98,17 +193,17 @@ export default function AssetAuditPage() {
     );
   }
 
-  const handleVerify = async (assetId, status) => {
+  const handleVerify = async (assetId, status, remarks = '', condition = '') => {
     if (!activeCycle) return;
     try {
-      // Optimistic update
-      setAuditAssets(prev => prev.map(a => (a.id === assetId ? { ...a, status } : a)));
       await verifyAuditAsset({
         auditCycleId: activeCycle.id,
         assetId,
         status,
+        remarks,
+        ...(condition ? { condition } : {}),
       });
-      toast.success('Verification status updated');
+      toast.success('Verification claim submitted successfully');
     } catch (err) {
       console.error(err);
       const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
@@ -140,6 +235,8 @@ export default function AssetAuditPage() {
       setSummaryReport(summary);
       setIsSummaryOpen(true);
       fetchAuditData();
+      // Refresh past reports list so new one appears immediately
+      getAuditReports().then(setPastReports).catch(console.error);
     } catch (err) {
       console.error(err);
       const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
@@ -175,13 +272,38 @@ export default function AssetAuditPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-[1.75rem] font-bold text-[#1E2022] tracking-[-0.02em] mb-1">
-          Structured Assets Audit
-        </h1>
-        <p className="text-sm text-[#9CA3AF] font-medium">
-          Verify physical locations and condition claims against current system records.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-[1.75rem] font-bold text-[#1E2022] tracking-[-0.02em] mb-1">
+            Structured Assets Audit
+          </h1>
+          <p className="text-sm text-[#9CA3AF] font-medium">
+            Verify physical locations and condition claims against current system records.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Add Audit Record — visible to all authorized roles when cycle is active */}
+          {activeCycle && (
+            <button
+              onClick={openAddRecord}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold rounded-full hover:bg-[#FAF7F5] hover:border-[#D97736] hover:text-[#D97736] transition-all active:scale-[0.98] shadow-sm"
+            >
+              <Plus size={16} />
+              Add Audit Record
+            </button>
+          )}
+          {/* Initiate Cycle — admin/manager only */}
+          {(isAdmin || isAssetManager) && (
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all active:scale-[0.98]"
+            >
+              <ClipboardCheck size={16} />
+              Initiate Audit Cycle
+            </button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -200,6 +322,14 @@ export default function AssetAuditPage() {
           <p className="text-sm text-[#9CA3AF] max-w-sm mt-1 mb-6 leading-relaxed">
             There are no asset audit cycles currently in progress. Active audits will appear here for verification.
           </p>
+          {(isAdmin || isAssetManager) && (
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all active:scale-[0.98]"
+            >
+              Initiate New Audit Cycle
+            </button>
+          )}
           <button
             onClick={() => setIsCreateOpen(true)}
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all active:scale-[0.98]"
@@ -238,75 +368,330 @@ export default function AssetAuditPage() {
                   <tr className="bg-[#FAF7F5]/80 border-b border-[#F0EBE6] text-xs font-bold text-[#6B7280] uppercase tracking-wider">
                     <th className="py-4 px-6">Asset Tag & Name</th>
                     <th className="py-4 px-6">Expected Location</th>
+                    <th className="py-4 px-6">Remarks</th>
+                    <th className="py-4 px-6">Condition</th>
                     <th className="py-4 px-6">Verification Claims</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0EBE6] text-sm text-[#1E2022]">
-                  {auditAssets.map((asset) => (
-                    <tr key={asset.id} className="hover:bg-[#FAF7F5]/30 transition-colors duration-150">
-                      <td className="py-4 px-6">
-                        <div>
-                          <p className="font-bold text-xs font-mono text-[#9CA3AF]">{asset.assetTag}</p>
-                          <p className="font-semibold text-sm text-[#1E2022] mt-0.5">{asset.name}</p>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 text-[#6B7280] font-medium text-xs">
-                        {asset.expectedLocation}
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-2">
-                          {/* Verified [Green] */}
-                          <button
-                            onClick={() => handleVerify(asset.id, 'verified')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                              asset.status === 'verified'
-                                ? 'bg-[#1E4620] text-white shadow-sm'
-                                : 'bg-[#1E4620]/[0.06] text-[#1E4620] hover:bg-[#1E4620]/15'
-                            }`}
-                          >
-                            Verified
-                          </button>
-
-                          {/* Missing [Red] */}
-                          <button
-                            onClick={() => handleVerify(asset.id, 'missing')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                              asset.status === 'missing'
-                                ? 'bg-[#C85C27] text-white shadow-sm'
-                                : 'bg-[#C85C27]/[0.06] text-[#C85C27] hover:bg-[#C85C27]/15'
-                            }`}
-                          >
-                            Missing
-                          </button>
-
-                          {/* Damaged [Ochre] */}
-                          <button
-                            onClick={() => handleVerify(asset.id, 'damaged')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                              asset.status === 'damaged'
-                                ? 'bg-[#D49B28] text-white shadow-sm'
-                                : 'bg-[#D49B28]/[0.06] text-[#D49B28] hover:bg-[#D49B28]/15'
-                            }`}
-                          >
-                            Damaged
-                          </button>
-                        </div>
+                  {auditAssets.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-12 px-6 text-center text-sm text-[#9CA3AF] font-medium">
+                        No assets in this audit cycle.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    auditAssets.map((asset) => (
+                      <tr key={asset.id} className="hover:bg-[#FAF7F5]/30 transition-colors duration-150">
+                        <td className="py-4 px-6">
+                          <div>
+                            <p className="font-bold text-xs font-mono text-[#9CA3AF]">{asset.assetTag}</p>
+                            <p className="font-semibold text-sm text-[#1E2022] mt-0.5">{asset.name}</p>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 text-[#6B7280] font-medium text-xs">
+                          {asset.expectedLocation}
+                        </td>
+                        <td className="py-4 px-6">
+                          <input
+                            type="text"
+                            placeholder="e.g. Notes or observations"
+                            value={asset.remarks || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, remarks: val } : a)));
+                            }}
+                            onBlur={() => handleVerify(asset.id, asset.status, asset.remarks, asset.condition)}
+                            className="w-full h-10 px-3 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-xs text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736] outline-none transition-all"
+                          />
+                        </td>
+                        <td className="py-4 px-6">
+                          <select
+                            value={asset.condition || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, condition: val } : a)));
+                              handleVerify(asset.id, asset.status, asset.remarks, val);
+                            }}
+                            className="w-full h-10 px-3 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-xs text-[#1E2022] focus:border-[#D97736] outline-none transition-all"
+                          >
+                            <option value="">Select condition</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                            <option value="critical">Critical</option>
+                          </select>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-2">
+                            {/* Verified [Green] */}
+                            <button
+                              onClick={() => {
+                                setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, status: 'verified' } : a)));
+                                handleVerify(asset.id, 'verified', asset.remarks, asset.condition);
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                asset.status === 'verified'
+                                  ? 'bg-[#1E4620] text-white shadow-sm'
+                                  : 'bg-[#1E4620]/[0.06] text-[#1E4620] hover:bg-[#1E4620]/15'
+                              }`}
+                            >
+                              Verified
+                            </button>
+
+                            {/* Missing [Red] */}
+                            <button
+                              onClick={() => {
+                                setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, status: 'missing' } : a)));
+                                handleVerify(asset.id, 'missing', asset.remarks, asset.condition);
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                asset.status === 'missing'
+                                  ? 'bg-[#C85C27] text-white shadow-sm'
+                                  : 'bg-[#C85C27]/[0.06] text-[#C85C27] hover:bg-[#C85C27]/15'
+                              }`}
+                            >
+                              Missing
+                            </button>
+
+                            {/* Damaged [Ochre] */}
+                            <button
+                              onClick={() => {
+                                setAuditAssets(prev => prev.map(a => (a.id === asset.id ? { ...a, status: 'damaged' } : a)));
+                                handleVerify(asset.id, 'damaged', asset.remarks, asset.condition);
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                asset.status === 'damaged'
+                                  ? 'bg-[#D49B28] text-white shadow-sm'
+                                  : 'bg-[#D49B28]/[0.06] text-[#D49B28] hover:bg-[#D49B28]/15'
+                              }`}
+                            >
+                              Damaged
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
           {/* Close Audit Action Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleCloseAudit}
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#1E2022] hover:bg-[#2D3135] text-white text-sm font-semibold rounded-xl hover:shadow-[0_4px_16px_rgba(30,32,34,0.15)] transition-all active:scale-[0.99]"
-            >
-              Close Audit Cycle & Generate Report
-            </button>
+          {(isAdmin || isAssetManager) && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleCloseAudit}
+                className="w-full sm:w-auto px-8 py-3.5 bg-[#1E2022] hover:bg-[#2D3135] text-white text-sm font-semibold rounded-xl hover:shadow-[0_4px_16px_rgba(30,32,34,0.15)] transition-all active:scale-[0.99]"
+              >
+                Close Audit Cycle & Generate Report
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+         ADD AUDIT RECORD MODAL
+         ───────────────────────────────────────────────────────────── */}
+      {isAddRecordOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EBE6] bg-[#FAF7F5]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#D97736]/10 flex items-center justify-center">
+                  <Plus size={15} className="text-[#D97736]" />
+                </div>
+                <h3 className="font-bold text-[#1E2022] text-base">Add Audit Record</h3>
+              </div>
+              <button
+                onClick={() => setIsAddRecordOpen(false)}
+                className="p-1 rounded-md text-[#9CA3AF] hover:bg-[#F4EFEB] hover:text-[#1E2022] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddRecord} className="p-6 space-y-4">
+              {/* Asset Selector */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Asset</label>
+                <select
+                  required
+                  value={recordForm.assetId}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, assetId: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/60 outline-none transition-all"
+                >
+                  <option value="">— Select an asset —</option>
+                  {assetsList.map(asset => (
+                    <option key={asset._id || asset.id} value={asset._id || asset.id}>
+                      {asset.assetTag ? `[${asset.assetTag}] ` : ''}{asset.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Verification Status</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['verified', 'missing', 'damaged', 'misplaced'].map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setRecordForm(prev => ({ ...prev, status: s }))}
+                      className={`h-9 rounded-xl text-xs font-bold capitalize transition-all ${
+                        recordForm.status === s
+                          ? s === 'verified'
+                            ? 'bg-[#1E4620] text-white shadow-sm'
+                            : s === 'missing'
+                            ? 'bg-[#C85C27] text-white shadow-sm'
+                            : s === 'damaged'
+                            ? 'bg-[#D49B28] text-white shadow-sm'
+                            : 'bg-[#6B7280] text-white shadow-sm'
+                          : 'bg-[#FAF7F5] border border-[#E8E2DC] text-[#6B7280] hover:border-[#D97736]/40'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Condition */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Physical Condition</label>
+                <select
+                  value={recordForm.condition}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, condition: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/60 outline-none transition-all"
+                >
+                  <option value="">— Select condition (optional) —</option>
+                  <option value="excellent">✅ Excellent — No visible wear</option>
+                  <option value="good">🟢 Good — Minor cosmetic wear</option>
+                  <option value="fair">🟡 Fair — Functional but noticeable wear</option>
+                  <option value="poor">🟠 Poor — Reduced functionality</option>
+                  <option value="critical">🔴 Critical — Immediate attention needed</option>
+                </select>
+              </div>
+
+              {/* Remarks */}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-semibold text-[#6B7280] uppercase tracking-wide">Remarks / Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Found in storage room B, cable missing, serial number verified..."
+                  value={recordForm.remarks}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, remarks: e.target.value }))}
+                  className="w-full px-4 py-3 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] placeholder:text-[#C4BEB8] focus:border-[#D97736]/60 outline-none transition-all resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddRecordOpen(false)}
+                  className="flex-1 h-11 rounded-xl border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold hover:bg-[#FAF7F5] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingRecord}
+                  className="flex-1 h-11 rounded-xl bg-[#D97736] text-white text-sm font-semibold hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {isAddingRecord
+                    ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <><Plus size={14} /> Save Record</>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+         INITIATE AUDIT CYCLE MODAL
+         ───────────────────────────────────────────────────────────── */}
+      {isCreateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EBE6] bg-[#FAF7F5]">
+              <h3 className="font-bold text-[#1E2022] text-base">Initiate Audit Cycle</h3>
+              <button onClick={() => setIsCreateOpen(false)} className="p-1 rounded-md text-[#9CA3AF] hover:bg-[#F4EFEB] hover:text-[#1E2022] transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleInitiateAudit} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Audit Cycle Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Q3 2026 Electronics Audit"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Scope / Location Filter (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Floor 4, Bangalore HQ"
+                  value={createForm.scope}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, scope: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[13px] font-medium text-[#6B7280]">Start Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={createForm.startDate}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[13px] font-medium text-[#6B7280]">End Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={createForm.endDate}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="flex-1 h-11 rounded-xl border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold hover:bg-[#FAF7F5] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 h-11 rounded-xl bg-[#D97736] text-white text-sm font-semibold hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Start Audit'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -468,6 +853,111 @@ export default function AssetAuditPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ─────────────────────────────────────────────────────────────
+         PREVIOUS AUDIT REPORTS SECTION
+         ───────────────────────────────────────────────────────────── */}
+      {pastReports.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#1E2022]/[0.06] flex items-center justify-center text-[#1E2022]">
+              <History size={17} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#1E2022]">Previous Audit Reports</h2>
+              <p className="text-xs text-[#9CA3AF]">{pastReports.length} completed cycle{pastReports.length !== 1 ? 's' : ''} on record</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {pastReports.map(report => (
+              <div key={report._id || report.auditCycleId} className="bg-white rounded-2xl border border-[#F0EBE6] shadow-[0_1px_4px_rgba(30,32,34,0.03)] overflow-hidden">
+                {/* Report Header */}
+                <button
+                  onClick={() => setSelectedReport(selectedReport === (report._id || report.auditCycleId) ? null : (report._id || report.auditCycleId))}
+                  className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#FAF7F5]/50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-9 h-9 rounded-xl bg-[#1E4620]/[0.08] flex items-center justify-center shrink-0">
+                      <FileSpreadsheet size={16} className="text-[#1E4620]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#1E2022]">{report.cycleName}</p>
+                      <p className="text-xs text-[#9CA3AF] mt-0.5">
+                        {report.scope ? `Scope: ${report.scope} · ` : ''}
+                        Closed {new Date(report.closedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stats chips */}
+                  <div className="hidden sm:flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-1 rounded-full bg-[#1E4620]/[0.08] text-[#1E4620] text-[11px] font-bold">{report.stats.verified} Verified</span>
+                    {report.stats.missing > 0 && <span className="px-2.5 py-1 rounded-full bg-[#C85C27]/[0.08] text-[#C85C27] text-[11px] font-bold">{report.stats.missing} Missing</span>}
+                    {report.stats.damaged > 0 && <span className="px-2.5 py-1 rounded-full bg-[#D49B28]/[0.08] text-[#D49B28] text-[11px] font-bold">{report.stats.damaged} Damaged</span>}
+                    {report.stats.misplaced > 0 && <span className="px-2.5 py-1 rounded-full bg-[#6B7280]/[0.08] text-[#6B7280] text-[11px] font-bold">{report.stats.misplaced} Misplaced</span>}
+                    <span className="text-xs text-[#9CA3AF] ml-1">{selectedReport === (report._id || report.auditCycleId) ? '▲' : '▼'}</span>
+                  </div>
+                </button>
+
+                {/* Expanded detail panel */}
+                {selectedReport === (report._id || report.auditCycleId) && (
+                  <div className="border-t border-[#F0EBE6] px-6 py-5 space-y-4">
+                    {/* Summary stats grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {[
+                        { label: 'Total', value: report.stats.total, color: '#1E2022' },
+                        { label: 'Verified', value: report.stats.verified, color: '#1E4620' },
+                        { label: 'Missing', value: report.stats.missing, color: '#C85C27' },
+                        { label: 'Damaged', value: report.stats.damaged, color: '#D49B28' },
+                        { label: 'Pending', value: report.stats.pending, color: '#9CA3AF' },
+                      ].map(s => (
+                        <div key={s.label} className="bg-[#FAF7F5] border border-[#F0EBE6] rounded-xl p-3 text-center">
+                          <p className="text-lg font-bold" style={{ color: s.color }}>{s.value}</p>
+                          <p className="text-[10px] font-bold text-[#9CA3AF] uppercase">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Discrepancies table */}
+                    <div>
+                      <h4 className="text-xs font-bold text-[#1E2022] uppercase tracking-wider mb-2">Discrepancy Details</h4>
+                      {report.discrepancies.length === 0 ? (
+                        <p className="text-xs text-[#9CA3AF] py-4 text-center bg-[#FAF7F5] rounded-xl border border-[#F0EBE6]">
+                          ✅ No discrepancies — all assets were verified.
+                        </p>
+                      ) : (
+                        <div className="border border-[#F0EBE6] rounded-xl overflow-hidden divide-y divide-[#F0EBE6]">
+                          {report.discrepancies.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-4 py-3 bg-white hover:bg-[#FAF7F5]/50 text-xs">
+                              <div>
+                                <p className="font-bold text-[#1E2022]">{item.assetName || '—'}</p>
+                                <p className="text-[#9CA3AF] font-mono mt-0.5">
+                                  {item.assetTag || '—'}{item.location ? ` · ${item.location}` : ''}
+                                </p>
+                                {item.condition && <p className="text-[#6B7280] mt-0.5">Condition: <span className="font-semibold capitalize">{item.condition}</span></p>}
+                                {item.remarks && <p className="text-[#6B7280] mt-0.5 italic">"{item.remarks}"</p>}
+                              </div>
+                              <span className={`ml-4 px-2.5 py-1 rounded-full font-bold uppercase text-[9px] shrink-0 ${
+                                item.status === 'missing'
+                                  ? 'bg-[#C85C27]/10 text-[#C85C27]'
+                                  : item.status === 'damaged'
+                                  ? 'bg-[#D49B28]/10 text-[#D49B28]'
+                                  : 'bg-[#6B7280]/10 text-[#6B7280]'
+                              }`}>
+                                {item.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
