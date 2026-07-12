@@ -12,6 +12,7 @@ router.use(protect);
 
 // Employee routes
 router.get("/my-allocations", allocationController.getUserAllocations);
+router.get("/asset/:assetId/history", allocationController.getAssetHistory);
 
 // Admin / Manager / Dept Head routes
 router.use(restrictTo("admin", "manager"));

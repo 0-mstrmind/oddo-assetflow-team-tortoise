@@ -103,3 +103,10 @@ export const getUserAllocationsService = async (userId) => {
     return await AssetAllocation.find({ employeeId: userId })
         .populate('assetId');
 };
+
+export const getAssetAllocationHistoryService = async (assetId) => {
+    return await AssetAllocation.find({ assetId })
+        .sort({ createdAt: -1 })
+        .populate('employeeId', 'name email')
+        .populate('allocatedBy', 'name email');
+};
