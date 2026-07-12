@@ -29,3 +29,10 @@ export const getAllBookings = CatchAsync(async (req, res) => {
     const bookings = await bookingService.getAllBookingsService(req.query);
     sendResponse(res, StatusCodes.OK, "All bookings retrieved", { bookings });
 });
+
+export const getResourceSchedule = CatchAsync(async (req, res) => {
+    const { resourceId } = req.params;
+    const { date } = req.query;
+    const schedule = await bookingService.getResourceScheduleService(resourceId, date || new Date());
+    sendResponse(res, StatusCodes.OK, "Resource schedule retrieved", { schedule });
+});
