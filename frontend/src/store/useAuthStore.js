@@ -4,13 +4,12 @@ import { create } from 'zustand';
  * AssetFlow Authentication Store
  * 
  * Manages user session, role-based access, and auth state.
- * The signIn action currently uses the mock service layer.
- * When backend is ready, swap the mock call in the signIn action.
  */
 
 const ROLES = {
   ADMIN: 'admin',
-  ASSET_MANAGER: 'asset_manager',
+  ASSET_MANAGER: 'manager',
+  DEPARTMENT_HEAD: 'department_head',
   EMPLOYEE: 'employee',
 };
 
@@ -21,6 +20,7 @@ export const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  isDeptHead: false,
 
   // ── Role Helpers ──
   get isAdmin() {
@@ -29,6 +29,9 @@ export const useAuthStore = create((set, get) => ({
   get isAssetManager() {
     return get().user?.role === ROLES.ASSET_MANAGER;
   },
+  get isDepartmentHead() {
+    return get().user?.role === ROLES.DEPARTMENT_HEAD || get().isDeptHead;
+  },
   get isEmployee() {
     return get().user?.role === ROLES.EMPLOYEE;
   },
@@ -36,8 +39,9 @@ export const useAuthStore = create((set, get) => ({
   getRoleLabel: () => {
     const role = get().user?.role;
     const labels = {
-      [ROLES.ADMIN]: 'Administrator',
+      [ROLES.ADMIN]: 'Admin',
       [ROLES.ASSET_MANAGER]: 'Asset Manager',
+      [ROLES.DEPARTMENT_HEAD]: 'Department Head',
       [ROLES.EMPLOYEE]: 'Employee',
     };
     return labels[role] || 'Unknown';
@@ -46,14 +50,42 @@ export const useAuthStore = create((set, get) => ({
   hasPermission: (permission) => {
     const user = get().user;
     if (!user) return false;
+    
+    // Admin has all permissions
+    if (user.role === ROLES.ADMIN) return true;
+    
     return user.permissions?.includes(permission) || false;
   },
 
   // ── Actions ──
+  checkDepartmentHeadStatus: async () => {
+    const user = get().user;
+    if (!user) return;
+    try {
+      const { getDepartments } = await import('@/services/api.mock');
+      const depts = await getDepartments();
+      // Compare user.id to the headId fields in the departments list
+      const isHead = depts.some(dept => dept.headId === user.id);
+      set({ isDeptHead: isHead });
+      
+      // Upgrade role & permissions dynamically if they are designated as head
+      if (isHead && user.role === ROLES.EMPLOYEE) {
+        set({
+          user: {
+            ...user,
+            role: ROLES.DEPARTMENT_HEAD,
+            permissions: ['assets.read', 'bookings.manage', 'bookings.view', 'transfers.approve']
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Failed to verify department head status:', e);
+    }
+  },
+
   signIn: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
-      // Import dynamically to keep the store clean
       const { mockSignIn } = await import('@/services/api.mock');
       const session = await mockSignIn(email, password);
       set({
@@ -63,6 +95,8 @@ export const useAuthStore = create((set, get) => ({
         isLoading: false,
         error: null,
       });
+      // Check headship status
+      await get().checkDepartmentHeadStatus();
       return session;
     } catch (err) {
       set({ isLoading: false, error: err.message });
@@ -82,6 +116,8 @@ export const useAuthStore = create((set, get) => ({
         isLoading: false,
         error: null,
       });
+      // Check headship status
+      await get().checkDepartmentHeadStatus();
       return session;
     } catch (err) {
       set({ isLoading: false, error: err.message });
@@ -94,7 +130,35 @@ export const useAuthStore = create((set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
+      isDeptHead: false,
       error: null,
+    });
+  },
+
+  // Direct role switcher for frontend RBAC testing
+  setMockRole: (role) => {
+    const user = get().user;
+    if (!user) return;
+    
+    // Map permissions accordingly
+    let permissions = ['assets.read'];
+    if (role === ROLES.ADMIN) {
+      permissions = ['assets.read', 'assets.write', 'assets.register', 'bookings.manage', 'bookings.view', 'allocations.manage', 'transfers.approve', 'maintenance.manage', 'audits.view', 'audits.submit', 'reports.view'];
+    } else if (role === ROLES.ASSET_MANAGER) {
+      permissions = ['assets.read', 'assets.write', 'assets.register', 'bookings.view', 'allocations.manage', 'maintenance.manage', 'audits.view', 'audits.submit'];
+    } else if (role === ROLES.DEPARTMENT_HEAD) {
+      permissions = ['assets.read', 'bookings.manage', 'bookings.view', 'transfers.approve'];
+    } else if (role === ROLES.EMPLOYEE) {
+      permissions = ['assets.read', 'bookings.view'];
+    }
+    
+    set({
+      user: {
+        ...user,
+        role,
+        permissions,
+      },
+      isDeptHead: role === ROLES.DEPARTMENT_HEAD
     });
   },
 
@@ -102,3 +166,4 @@ export const useAuthStore = create((set, get) => ({
 }));
 
 export { ROLES };
+
