@@ -8,6 +8,7 @@ import dashboardRoute from "../modules/dashboard/dashboard.route.js";
 import departmentRoute from "../modules/department/department.route.js";
 import assetRoute from "../modules/asset/asset.route.js";
 import reportRoute from "../modules/report/report.route.js";
+import notificationRoute from "../modules/notification/notification.route.js";
 import sendResponse from "../shared/utils/ApiResponse.js";
 
 /* <NEATNODE_IMPORTS> */
@@ -36,6 +37,7 @@ router.use("/dashboard", dashboardRoute);
 router.use("/departments", departmentRoute);
 router.use("/assets", assetRoute);
 router.use("/reports", reportRoute);
+router.use("/notifications", notificationRoute);
 
 /* <NEATNODE_ROUTES> */
 // Reserved for NeatNode file generation. Do not remove or modify.
