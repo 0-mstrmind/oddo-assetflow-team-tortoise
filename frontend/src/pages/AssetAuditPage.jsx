@@ -5,6 +5,8 @@ import {
   getAuditChecklist,
   verifyAuditAsset,
   closeAuditCycle,
+  createAuditCycle,
+  startAuditCycle,
 } from '@/services/audit.service';
 import {
   ClipboardCheck,
@@ -29,6 +31,16 @@ export default function AssetAuditPage() {
   // Close Audit Summary Modal
   const [summaryReport, setSummaryReport] = useState(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+
+  // Initiate Audit Cycle Modal State
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    scope: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  });
 
   const fetchAuditData = async () => {
     setIsLoading(true);
@@ -99,7 +111,8 @@ export default function AssetAuditPage() {
       toast.success('Verification status updated');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to update verification status');
+      const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
+      toast.error(msg);
       fetchAuditData();
     }
   };
@@ -129,7 +142,33 @@ export default function AssetAuditPage() {
       fetchAuditData();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to close audit cycle');
+      const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
+      toast.error(msg);
+    }
+  };
+
+  const handleInitiateAudit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const cycle = await createAuditCycle(createForm);
+      await startAuditCycle(cycle._id || cycle.id);
+      
+      toast.success('Audit cycle created and started successfully');
+      setIsCreateOpen(false);
+      setCreateForm({
+        name: '',
+        scope: '',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      });
+      fetchAuditData();
+    } catch (err) {
+      console.error(err);
+      const msg = err.response?.data?.errors?.join(', ') || err.response?.data?.message || err.message;
+      toast.error(msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -161,6 +200,12 @@ export default function AssetAuditPage() {
           <p className="text-sm text-[#9CA3AF] max-w-sm mt-1 mb-6 leading-relaxed">
             There are no asset audit cycles currently in progress. Active audits will appear here for verification.
           </p>
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#D97736] text-white text-sm font-semibold rounded-full hover:bg-[#C85C27] hover:shadow-[0_4px_16px_rgba(217,119,54,0.25)] transition-all active:scale-[0.98]"
+          >
+            Initiate New Audit Cycle
+          </button>
         </div>
       ) : (
         <div className="space-y-6">
@@ -262,6 +307,88 @@ export default function AssetAuditPage() {
             >
               Close Audit Cycle & Generate Report
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+         INITIATE AUDIT CYCLE MODAL
+         ───────────────────────────────────────────────────────────── */}
+      {isCreateOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EBE6] bg-[#FAF7F5]">
+              <h3 className="font-bold text-[#1E2022] text-base">Initiate Audit Cycle</h3>
+              <button onClick={() => setIsCreateOpen(false)} className="p-1 rounded-md text-[#9CA3AF] hover:bg-[#F4EFEB] hover:text-[#1E2022] transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleInitiateAudit} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Audit Cycle Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Q3 2026 Electronics Audit"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-[13px] font-medium text-[#6B7280]">Scope / Location Filter (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Floor 4, Bangalore HQ"
+                  value={createForm.scope}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, scope: e.target.value }))}
+                  className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[13px] font-medium text-[#6B7280]">Start Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={createForm.startDate}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-[13px] font-medium text-[#6B7280]">End Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={createForm.endDate}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateOpen(false)}
+                  className="flex-1 h-11 rounded-xl border border-[#E8E2DC] text-[#1E2022] text-sm font-semibold hover:bg-[#FAF7F5] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 h-11 rounded-xl bg-[#D97736] text-white text-sm font-semibold hover:bg-[#C85C27] hover:shadow-[0_4px_12px_rgba(217,119,54,0.2)] transition-all flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Start Audit'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
