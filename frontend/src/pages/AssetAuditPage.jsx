@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 
 export default function AssetAuditPage() {
-  const { isAdmin, isAssetManager } = useAuthStore();
-  const isAuthorized = isAdmin || isAssetManager;
+  const { user } = useAuthStore();
+  const isAuthorized = user?.role === 'admin' || user?.role === 'manager';
 
   const [activeCycle, setActiveCycle] = useState(null);
   const [auditAssets, setAuditAssets] = useState([]);

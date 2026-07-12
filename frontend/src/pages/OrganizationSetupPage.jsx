@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 
 export default function OrganizationSetupPage() {
-  const { isAdmin } = useAuthStore();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('departments'); // 'departments' | 'categories' | 'employees'
   
   // Data State

@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 
 export default function AssetDirectoryPage() {
-  const { isAdmin, isAssetManager } = useAuthStore();
-  const canRegister = isAdmin || isAssetManager;
+  const { user } = useAuthStore();
+  const canRegister = user?.role === 'admin' || user?.role === 'manager';
 
   const [searchParams, setSearchParams] = useSearchParams();
 

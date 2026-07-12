@@ -9,7 +9,16 @@ import { ShieldAlert } from 'lucide-react';
  * @param {string[]} allowedRoles - List of roles permitted to view this route.
  */
 export default function ProtectedRoute({ children, allowedRoles = [] }) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+
+  // 0. Wait for Zustand storage hydration from localStorage
+  if (!_hasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="w-8 h-8 border-2 border-[#E8E2DC] border-t-[#D97736] rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // 1. Authentication Check
   if (!isAuthenticated) {
