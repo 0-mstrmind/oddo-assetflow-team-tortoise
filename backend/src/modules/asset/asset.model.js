@@ -44,6 +44,12 @@ const assetSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    qrCode: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true,
+    },
 }, {
     timestamps: true,
 });
