@@ -12,6 +12,8 @@ router.use(restrictTo("admin", "manager"));
 
 router.post("/", validateBody(validation.createAuditCycleSchema), controller.createCycle);
 router.get("/", controller.getCycles);
+router.patch("/:id/start", controller.startCycle);
 router.patch("/:id/close", controller.closeCycle);
+router.get("/:id/checklist", controller.getChecklist);
 
 export default router;

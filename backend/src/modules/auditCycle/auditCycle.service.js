@@ -36,3 +36,46 @@ export const closeAuditCycle = async (id) => {
 export const getAuditCycles = async (query = {}) => {
     return await AuditCycle.find(query);
 };
+
+export const startAuditCycle = async (id) => {
+    const cycle = await AuditCycle.findById(id);
+    if (!cycle) throw new ApiError(StatusCodes.NOT_FOUND, "Audit cycle not found");
+
+    if (cycle.status !== 'planned') {
+        throw new ApiError(StatusCodes.BAD_REQUEST, `Cannot start a cycle that is already '${cycle.status}'`);
+    }
+
+    cycle.status = 'in-progress';
+    return await cycle.save();
+};
+
+export const generateAuditChecklist = async (cycleId) => {
+    const cycle = await AuditCycle.findById(cycleId);
+    if (!cycle) throw new ApiError(StatusCodes.NOT_FOUND, "Audit cycle not found");
+
+    // Fetch all assets (optionally filtered by scope if it maps to a department/location)
+    const assetQuery = {};
+    if (cycle.scope) {
+        assetQuery.location = cycle.scope;
+    }
+    const assets = await Asset.find(assetQuery).lean();
+
+    // Fetch existing audit results for this cycle
+    const existingResults = await AuditResult.find({ auditCycleId: cycleId }).lean();
+    const resultMap = {};
+    for (const r of existingResults) {
+        resultMap[r.assetId.toString()] = r;
+    }
+
+    // Left-join: merge asset list with audit progress
+    const checklist = assets.map(asset => ({
+        asset,
+        auditResult: resultMap[asset._id.toString()] || null,
+        isAudited: !!resultMap[asset._id.toString()],
+    }));
+
+    const totalAssets = checklist.length;
+    const auditedCount = checklist.filter(c => c.isAudited).length;
+
+    return { checklist, totalAssets, auditedCount, pendingCount: totalAssets - auditedCount };
+};
