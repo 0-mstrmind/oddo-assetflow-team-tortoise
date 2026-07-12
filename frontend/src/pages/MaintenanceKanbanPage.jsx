@@ -1,19 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
   getMaintenanceRequests,
   addMaintenanceRequest,
   updateMaintenanceStatus,
 } from '@/services/api.mock';
 import {
-  Wrench,
   Plus,
   X,
-  AlertTriangle,
   User,
-  CheckCircle,
-  Clock,
-  ArrowRight,
 } from 'lucide-react';
 
 const COLUMNS = [
@@ -26,11 +22,12 @@ const COLUMNS = [
 
 export default function MaintenanceKanbanPage() {
   const { isAdmin, isAssetManager } = useAuthStore();
-  const canManage = isAdmin || isAssetManager; // manager/admin can approve and drag cards
+  const canManage = isAdmin || isAssetManager; // manager/admin can drag and drop cards
 
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -49,39 +46,48 @@ export default function MaintenanceKanbanPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchRequests();
   }, []);
 
-  // HTML5 Drag and Drop Handlers
-  const handleDragStart = (e, cardId) => {
-    if (!canManage) {
-      e.preventDefault();
+  const handleDragEnd = async (result) => {
+    if (!canManage) return;
+    const { destination, source, draggableId } = result;
+
+    if (!destination) return;
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
       return;
     }
-    e.dataTransfer.setData('cardId', cardId);
-  };
 
-  const handleDragOver = (e) => {
-    if (!canManage) return;
-    e.preventDefault(); // Required to allow dropping
-  };
+    const sourceStatus = source.droppableId;
+    const targetStatus = destination.droppableId;
 
-  const handleDrop = async (e, targetStatus) => {
-    if (!canManage) return;
-    e.preventDefault();
-    const cardId = e.dataTransfer.getData('cardId');
-    if (!cardId) return;
+    const newRequests = Array.from(requests);
+    const sourceItems = newRequests.filter(r => r.status === sourceStatus);
+    const [draggedItem] = sourceItems.splice(source.index, 1);
+    
+    draggedItem.status = targetStatus;
+
+    if (sourceStatus === targetStatus) {
+      sourceItems.splice(destination.index, 0, draggedItem);
+      const otherItems = newRequests.filter(r => r.status !== sourceStatus);
+      setRequests([...otherItems, ...sourceItems]);
+    } else {
+      const targetItems = newRequests.filter(r => r.status === targetStatus);
+      targetItems.splice(destination.index, 0, draggedItem);
+      const otherItems = newRequests.filter(r => r.status !== sourceStatus && r.status !== targetStatus);
+      setRequests([...otherItems, ...sourceItems, ...targetItems]);
+    }
 
     try {
-      // Optimistic Update
-      setRequests(prev =>
-        prev.map(req => (req.id === cardId ? { ...req, status: targetStatus } : req))
-      );
-      
-      await updateMaintenanceStatus(cardId, targetStatus);
+      await updateMaintenanceStatus(draggableId, targetStatus);
     } catch (err) {
       console.error(err);
-      fetchRequests(); // Rollback if error
+      fetchRequests();
     }
   };
 
@@ -139,72 +145,94 @@ export default function MaintenanceKanbanPage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {!mounted || isLoading ? (
         <div className="flex items-center justify-center h-[50vh] bg-white rounded-2xl border border-[#F0EBE6] shadow-sm">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-[#E8E2DC] border-t-[#D97736] rounded-full animate-spin" />
-            <p className="text-sm text-[#9CA3AF]">Loading maintenance board...</p>
+            <p className="text-sm text-[#9CA3AF]">
+              {!mounted ? 'Initializing drag context...' : 'Loading maintenance board...'}
+            </p>
           </div>
         </div>
       ) : (
-        /* Kanban Board View */
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4 items-start">
-          {COLUMNS.map((col) => {
-            const columnRequests = requests.filter(r => r.status === col.id);
-            return (
-              <div
-                key={col.id}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, col.id)}
-                className="bg-white rounded-2xl border border-[#F0EBE6] p-4 flex flex-col min-h-[450px] shadow-[0_1px_3px_rgba(30,32,34,0.02)] shrink-0 w-full"
-              >
-                {/* Column Title */}
-                <div className="flex items-center justify-between pb-3.5 border-b border-[#F0EBE6] mb-4">
-                  <h3 className="text-xs font-bold text-[#1E2022] uppercase tracking-wider">{col.label}</h3>
-                  <span className="text-[11px] font-bold px-2 py-0.5 bg-[#FAF7F5] border border-[#F0EBE6] rounded-full text-[#6B7280]">
-                    {columnRequests.length}
-                  </span>
-                </div>
-
-                {/* Cards list */}
-                <div className="flex-1 space-y-3 overflow-y-auto">
-                  {columnRequests.map((req) => (
+        /* hello-pangea/dnd Kanban Board Context */
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4 items-start select-none">
+            {COLUMNS.map((col) => {
+              const columnRequests = requests.filter(r => r.status === col.id);
+              
+              return (
+                <Droppable key={col.id} droppableId={col.id}>
+                  {(provided, snapshot) => (
                     <div
-                      key={req.id}
-                      draggable={canManage}
-                      onDragStart={(e) => handleDragStart(e, req.id)}
-                      className={`bg-[#FAF7F5] border border-[#E8E2DC] hover:border-[#D97736]/30 p-4 rounded-xl shadow-sm transition-all ${
-                        canManage ? 'cursor-grab active:cursor-grabbing hover:shadow-md' : 'cursor-default'
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`bg-white rounded-2xl border border-[#F0EBE6] p-4 flex flex-col min-h-[450px] shadow-[0_1px_3px_rgba(30,32,34,0.02)] shrink-0 w-[240px] md:w-[250px] transition-colors duration-200 ${
+                        snapshot.isDraggingOver ? 'bg-[#FAF7F5]' : ''
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="font-mono text-[10px] font-bold text-[#9CA3AF]">{req.assetTag}</span>
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${getPriorityBadge(req.priority)}`}>
-                          {req.priority}
+                      {/* Column Header */}
+                      <div className="flex items-center justify-between pb-3.5 border-b border-[#F0EBE6] mb-4">
+                        <h3 className="text-xs font-bold text-[#1E2022] uppercase tracking-wider">{col.label}</h3>
+                        <span className="text-[11px] font-bold px-2 py-0.5 bg-[#FAF7F5] border border-[#F0EBE6] rounded-full text-[#6B7280]">
+                          {columnRequests.length}
                         </span>
                       </div>
 
-                      <h4 className="text-xs font-bold text-[#1E2022] mb-1.5 line-clamp-1">{req.name}</h4>
-                      <p className="text-[11px] text-[#6B7280] leading-relaxed mb-3 line-clamp-2">{req.issue}</p>
+                      {/* Column Cards */}
+                      <div className="flex-1 space-y-3 min-h-[300px]">
+                        {columnRequests.map((req, index) => (
+                          <Draggable
+                            key={req.id}
+                            draggableId={req.id}
+                            index={index}
+                            isDragDisabled={!canManage}
+                          >
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                className={`bg-[#FAF7F5] border border-[#E8E2DC] hover:border-[#D97736]/30 p-4 rounded-xl shadow-sm transition-all select-none ${
+                                  dragSnapshot.isDragging ? 'shadow-lg rotate-2 scale-[1.02]' : ''
+                                } ${
+                                  canManage ? 'cursor-grab active:cursor-grabbing hover:shadow-md' : 'cursor-default'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                  <span className="font-mono text-[10px] font-bold text-[#9CA3AF]">{req.assetTag}</span>
+                                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${getPriorityBadge(req.priority)}`}>
+                                    {req.priority}
+                                  </span>
+                                </div>
 
-                      <div className="flex items-center justify-between border-t border-[#E8E2DC]/60 pt-2.5">
-                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#9CA3AF]">
-                          <User size={12} />
-                          <span className="truncate max-w-[80px] text-[#6B7280]">{req.technician}</span>
-                        </div>
+                                <h4 className="text-xs font-bold text-[#1E2022] mb-1.5 line-clamp-1">{req.name}</h4>
+                                <p className="text-[11px] text-[#6B7280] leading-relaxed mb-3 line-clamp-2">{req.issue}</p>
+
+                                <div className="flex items-center justify-between border-t border-[#E8E2DC]/60 pt-2.5">
+                                  <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#9CA3AF]">
+                                    <User size={12} />
+                                    <span className="truncate max-w-[100px] text-[#6B7280]">{req.technician}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        {columnRequests.length === 0 && (
+                          <div className="flex-1 flex items-center justify-center border border-dashed border-[#E8E2DC] rounded-xl py-8 text-center bg-gray-50/50 min-h-[100px]">
+                            <p className="text-[10px] text-[#C4BEB8] max-w-[100px] leading-relaxed">No service tickets here</p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                  {columnRequests.length === 0 && (
-                    <div className="flex-1 flex items-center justify-center border border-dashed border-[#E8E2DC] rounded-xl py-8 text-center bg-gray-50/50">
-                      <p className="text-[10px] text-[#C4BEB8] max-w-[100px] leading-relaxed">Drag assets here for service</p>
-                    </div>
                   )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </Droppable>
+              );
+            })}
+          </div>
+        </DragDropContext>
       )}
 
       {/* ─────────────────────────────────────────────────────────────
