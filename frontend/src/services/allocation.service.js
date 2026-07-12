@@ -37,3 +37,21 @@ export const submitTransferRequest = async (assetId, toEmployeeId, reason) => {
   const { data } = await api.post("/transfers", payload);
   return data.transfer;
 };
+
+/**
+ * Fetch all pending asset requests (admin only).
+ */
+export const getPendingRequests = async () => {
+  const { data } = await api.get("/transfers/pending");
+  return data.transfers || [];
+};
+
+/**
+ * Approve or reject an asset request (admin only).
+ * @param {string} transferId
+ * @param {'approved'|'rejected'} status
+ */
+export const updateRequestStatus = async (transferId, status) => {
+  const { data } = await api.patch(`/transfers/${transferId}/status`, { status });
+  return data.transfer;
+};

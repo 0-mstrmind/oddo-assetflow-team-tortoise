@@ -26,7 +26,12 @@ export const requestTransferService = async (assetId, toEmployeeId, requestedBy,
         requestedBy,
         reason
     });
-    return await transfer.save();
+    await transfer.save();
+
+    // Return populated so controller can read asset name etc.
+    return await TransferRequest.findById(transfer._id)
+        .populate('assetId', 'name assetTag')
+        .populate('requestedBy', 'name email');
 };
 
 export const approveOrRejectTransferService = async (transferId, status, approvedBy) => {
@@ -54,7 +59,12 @@ export const approveOrRejectTransferService = async (transferId, status, approve
         await newAllocation.save();
     }
     
-    return await transfer.save();
+    await transfer.save();
+
+    // Return populated so controller can read asset name and requester
+    return await TransferRequest.findById(transfer._id)
+        .populate('assetId', 'name assetTag')
+        .populate('requestedBy', 'name email');
 };
 
 export const getAllTransfersService = async (query = {}) => {

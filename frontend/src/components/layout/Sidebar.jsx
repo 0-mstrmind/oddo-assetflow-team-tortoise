@@ -30,7 +30,7 @@ const NAVIGATION_ITEMS = [
   { id: 'maintenance',    label: 'Maintenance',           icon: 'wrench',           href: '/maintenance' },
   { id: 'audit',          label: 'Audit',                 icon: 'clipboard-check',  href: '/audit' },
   { id: 'reports',        label: 'Reports',               icon: 'bar-chart-3',      href: '/reports' },
-  { id: 'notifications',  label: 'Notifications',         icon: 'bell',             href: '/notifications', badge: 3 },
+  { id: 'notifications',  label: 'Notifications',         icon: 'bell',             href: '/notifications' },
 ];
 
 const ROLE_RULES = {
@@ -46,7 +46,7 @@ const ROLE_RULES = {
   notifications: ['admin', 'manager', 'department_head', 'employee'],
 };
 
-export default function Sidebar({ collapsed, onToggle }) {
+export default function Sidebar({ collapsed, onToggle, notificationCount = 0 }) {
   const location = useLocation();
   const user = useAuthStore(s => s.user);
   const { mutate: signOut } = useLogout();
@@ -114,13 +114,13 @@ export default function Sidebar({ collapsed, onToggle }) {
                 <span className="text-[13px] font-medium truncate">{item.label}</span>
               )}
 
-              {/* Badge */}
-              {item.badge && !collapsed && (
+              {/* Badge — use live notificationCount for the notifications item */}
+              {item.id === 'notifications' && notificationCount > 0 && !collapsed && (
                 <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-[#D97736] text-white text-[10px] font-bold rounded-full">
-                  {item.badge}
+                  {notificationCount > 99 ? '99+' : notificationCount}
                 </span>
               )}
-              {item.badge && collapsed && (
+              {item.id === 'notifications' && notificationCount > 0 && collapsed && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-[#D97736] rounded-full" />
               )}
             </NavLink>
