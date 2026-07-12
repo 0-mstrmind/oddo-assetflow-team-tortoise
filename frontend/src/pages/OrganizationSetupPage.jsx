@@ -23,6 +23,49 @@ function extractMessage(err, fallback) {
   return err?.response?.data?.message ?? fallback;
 }
 
+// ── Reusable Modal wrappers (Defined outside to prevent unmounting on parent re-renders) ──
+const Modal = ({ onClose, title, children }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EBE6] bg-[#FAF7F5]">
+        <h3 className="font-bold text-[#1E2022] text-base">{title}</h3>
+        <button onClick={onClose} className="p-1 rounded-md text-[#9CA3AF] hover:bg-[#F4EFEB] hover:text-[#1E2022] transition-colors">
+          <X size={18} />
+        </button>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
+const DeleteConfirmModal = ({ item, label, onConfirm, onClose, isDeleting }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="p-6 flex flex-col items-center text-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+          <AlertTriangle size={22} className="text-red-600" />
+        </div>
+        <div>
+          <h3 className="font-bold text-[#1E2022] text-base mb-1">Delete {label}</h3>
+          <p className="text-sm text-[#6B7280] leading-relaxed">
+            Are you sure you want to delete <span className="font-semibold text-[#1E2022]">{item?.name}</span>? This cannot be undone.
+          </p>
+        </div>
+        <div className="flex gap-3 w-full">
+          <button onClick={onClose} disabled={isDeleting} className={cancelBtnCls}>Cancel</button>
+          <button onClick={onConfirm} disabled={isDeleting}
+            className="flex-1 h-11 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            {isDeleting
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <Trash2 size={14} />}
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function OrganizationSetupPage() {
   const user = useAuthStore(s => s.user);
   const isAdmin = user?.role === 'admin';
@@ -265,49 +308,6 @@ export default function OrganizationSetupPage() {
       </div>
     );
   }
-
-  // ── Reusable Modal wrapper ────────────────────────────────────────
-  const Modal = ({ onClose, title, children }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0EBE6] bg-[#FAF7F5]">
-          <h3 className="font-bold text-[#1E2022] text-base">{title}</h3>
-          <button onClick={onClose} className="p-1 rounded-md text-[#9CA3AF] hover:bg-[#F4EFEB] hover:text-[#1E2022] transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-
-  const DeleteConfirmModal = ({ item, label, onConfirm, onClose }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl border border-[#F0EBE6] w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="p-6 flex flex-col items-center text-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertTriangle size={22} className="text-red-600" />
-          </div>
-          <div>
-            <h3 className="font-bold text-[#1E2022] text-base mb-1">Delete {label}</h3>
-            <p className="text-sm text-[#6B7280] leading-relaxed">
-              Are you sure you want to delete <span className="font-semibold text-[#1E2022]">{item?.name}</span>? This cannot be undone.
-            </p>
-          </div>
-          <div className="flex gap-3 w-full">
-            <button onClick={onClose} disabled={isDeleting} className={cancelBtnCls}>Cancel</button>
-            <button onClick={onConfirm} disabled={isDeleting}
-              className="flex-1 h-11 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {isDeleting
-                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                : <Trash2 size={14} />}
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -710,15 +710,15 @@ export default function OrganizationSetupPage() {
       {/* ── DELETE CONFIRMS ────────────────────────────────────────── */}
       {deleteConfirmDept && (
         <DeleteConfirmModal item={deleteConfirmDept} label="Department"
-          onConfirm={handleDeleteDept} onClose={() => setDeleteConfirmDept(null)} />
+          onConfirm={handleDeleteDept} onClose={() => setDeleteConfirmDept(null)} isDeleting={isDeleting} />
       )}
       {deleteConfirmCat && (
         <DeleteConfirmModal item={deleteConfirmCat} label="Category"
-          onConfirm={handleDeleteCat} onClose={() => setDeleteConfirmCat(null)} />
+          onConfirm={handleDeleteCat} onClose={() => setDeleteConfirmCat(null)} isDeleting={isDeleting} />
       )}
       {deleteConfirmEmp && (
         <DeleteConfirmModal item={deleteConfirmEmp} label="Employee"
-          onConfirm={handleDeleteEmp} onClose={() => setDeleteConfirmEmp(null)} />
+          onConfirm={handleDeleteEmp} onClose={() => setDeleteConfirmEmp(null)} isDeleting={isDeleting} />
       )}
     </div>
   );
