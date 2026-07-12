@@ -362,13 +362,23 @@ export default function DashboardPage() {
         <div className="bg-white rounded-2xl p-5 md:p-6"
           style={{ boxShadow: '0 1px 4px rgba(30,32,34,0.03), 0 4px 16px rgba(30,32,34,0.025)' }}
         >
-          {activity.map((item, i) => (
-            <ActivityItem
-              key={item.id}
-              activity={item}
-              isLast={i === activity.length - 1}
-            />
-          ))}
+          {activity.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#F4EFEB] flex items-center justify-center">
+                <CalendarClock size={18} className="text-[#D8D2CC]" />
+              </div>
+              <p className="text-sm text-[#9CA3AF]">No recent activity to display</p>
+              <p className="text-xs text-[#C5BEB8]">Actions like allocations, bookings, and maintenance will appear here</p>
+            </div>
+          ) : (
+            activity.map((item, i) => (
+              <ActivityItem
+                key={item.id}
+                activity={item}
+                isLast={i === activity.length - 1}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>
