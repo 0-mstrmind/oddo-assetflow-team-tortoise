@@ -49,7 +49,7 @@ export const getDashboardAnalytics = CatchAsync(async (req, res) => {
 
 export const createDepartment = CatchAsync(async (req, res) => {
   const department = await createDepartmentService(req.body);
-  await logActivity(req.user.userid, "CREATE", "Department", department._id);
+  await logActivity(req.user.id, "CREATE", "Department", department._id);
   sendResponse(res, StatusCodes.CREATED, "Department created successfully", { department });
 });
 
@@ -65,13 +65,13 @@ export const getDepartmentById = CatchAsync(async (req, res) => {
 
 export const updateDepartment = CatchAsync(async (req, res) => {
   const department = await updateDepartmentService(req.params.id, req.body);
-  await logActivity(req.user.userid, "UPDATE", "Department", department._id);
+  await logActivity(req.user.id, "UPDATE", "Department", department._id);
   sendResponse(res, StatusCodes.OK, "Department updated successfully", { department });
 });
 
 export const deleteDepartment = CatchAsync(async (req, res) => {
   await deleteDepartmentService(req.params.id);
-  await logActivity(req.user.userid, "DELETE", "Department", req.params.id);
+  await logActivity(req.user.id, "DELETE", "Department", req.params.id);
   sendResponse(res, StatusCodes.OK, "Department deleted successfully");
 });
 
@@ -79,7 +79,7 @@ export const deleteDepartment = CatchAsync(async (req, res) => {
 
 export const createAssetCategory = CatchAsync(async (req, res) => {
   const category = await createAssetCategoryService(req.body);
-  await logActivity(req.user.userid, "CREATE", "AssetCategory", category._id);
+  await logActivity(req.user.id, "CREATE", "AssetCategory", category._id);
   sendResponse(res, StatusCodes.CREATED, "Asset category created successfully", { category });
 });
 
@@ -95,13 +95,13 @@ export const getAssetCategoryById = CatchAsync(async (req, res) => {
 
 export const updateAssetCategory = CatchAsync(async (req, res) => {
   const category = await updateAssetCategoryService(req.params.id, req.body);
-  await logActivity(req.user.userid, "UPDATE", "AssetCategory", category._id);
+  await logActivity(req.user.id, "UPDATE", "AssetCategory", category._id);
   sendResponse(res, StatusCodes.OK, "Asset category updated successfully", { category });
 });
 
 export const deleteAssetCategory = CatchAsync(async (req, res) => {
   await deleteAssetCategoryService(req.params.id);
-  await logActivity(req.user.userid, "DELETE", "AssetCategory", req.params.id);
+  await logActivity(req.user.id, "DELETE", "AssetCategory", req.params.id);
   sendResponse(res, StatusCodes.OK, "Asset category deleted successfully");
 });
 
@@ -109,7 +109,7 @@ export const deleteAssetCategory = CatchAsync(async (req, res) => {
 
 export const createAuditCycle = CatchAsync(async (req, res) => {
   const cycle = await createAuditCycleService(req.body);
-  await logActivity(req.user.userid, "CREATE", "AuditCycle", cycle._id);
+  await logActivity(req.user.id, "CREATE", "AuditCycle", cycle._id);
   sendResponse(res, StatusCodes.CREATED, "Audit cycle created successfully", { cycle });
 });
 
@@ -125,13 +125,13 @@ export const getAuditCycleById = CatchAsync(async (req, res) => {
 
 export const updateAuditCycle = CatchAsync(async (req, res) => {
   const cycle = await updateAuditCycleService(req.params.id, req.body);
-  await logActivity(req.user.userid, "UPDATE", "AuditCycle", cycle._id);
+  await logActivity(req.user.id, "UPDATE", "AuditCycle", cycle._id);
   sendResponse(res, StatusCodes.OK, "Audit cycle updated successfully", { cycle });
 });
 
 export const deleteAuditCycle = CatchAsync(async (req, res) => {
   await deleteAuditCycleService(req.params.id);
-  await logActivity(req.user.userid, "DELETE", "AuditCycle", req.params.id);
+  await logActivity(req.user.id, "DELETE", "AuditCycle", req.params.id);
   sendResponse(res, StatusCodes.OK, "Audit cycle deleted successfully");
 });
 
@@ -144,6 +144,6 @@ export const getEmployees = CatchAsync(async (req, res) => {
 
 export const updateEmployeeAssignment = CatchAsync(async (req, res) => {
   const employee = await updateEmployeeAssignmentService(req.params.id, req.body);
-  await logActivity(req.user.userid, "ASSIGN_ROLE_DEPT", "User", employee._id);
+  await logActivity(req.user.id, "ASSIGN_ROLE_DEPT", "User", employee._id);
   sendResponse(res, StatusCodes.OK, "Employee assignment updated successfully", { employee });
 });

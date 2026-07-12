@@ -25,12 +25,12 @@ export const createUserService = async ({ name, email, password }) => {
   });
 
   const accessToken = generateAccessToken({
-    userid: user._id,
+    id: user._id,
     role: user.role,
   });
 
   const refreshToken = generateRefreshToken({
-    userid: user._id,
+    id: user._id,
     role: user.role,
   });
 
@@ -62,12 +62,12 @@ export const loginUserService = async ({ email, password }) => {
 
   // Generate JWT token
   const accessToken = generateAccessToken({
-    userid: user._id,
+    id: user._id,
     role: user.role,
   });
 
   const refreshToken = generateRefreshToken({
-    userid: user._id,
+    id: user._id,
     role: user.role,
   });
 
@@ -107,7 +107,7 @@ export const refreshTokenService = async (userId, refreshToken) => {
   }
 
   const accessToken = generateAccessToken({
-    userid: user._id,
+    id: user._id,
     role: user.role,
   });
 

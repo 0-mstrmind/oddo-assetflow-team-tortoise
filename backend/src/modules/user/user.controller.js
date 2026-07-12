@@ -54,7 +54,7 @@ export const loginUser = CatchAsync(async (req, res) => {
 
 // Controller to get user by logged in User ID
 export const getUser = CatchAsync(async (req, res, next) => {
-  const userId = req.user.userid;
+  const userId = req.user.id;
 
   const user = await getUserService(userId);
   if (!user) return next(new ApiError(StatusCodes.NOT_FOUND, "User not found"));
@@ -65,7 +65,7 @@ export const getUser = CatchAsync(async (req, res, next) => {
 // Controller to refresh access token
 export const refreshToken = CatchAsync(async (req, res) => {
   const refreshToken = req.refreshToken;
-  const userId = req.user.userid;
+  const userId = req.user.id;
 
   const { accessToken } = await refreshTokenService(userId, refreshToken);
 
@@ -79,7 +79,7 @@ export const refreshToken = CatchAsync(async (req, res) => {
 
 // Controller to logout user
 export const logoutUser = CatchAsync(async (req, res) => {
-  const userId = req.user.userid;
+  const userId = req.user.id;
 
   await logoutService(userId);
 
