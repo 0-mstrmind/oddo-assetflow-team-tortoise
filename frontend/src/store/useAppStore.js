@@ -10,7 +10,7 @@ import { persist } from 'zustand/middleware';
 export const useAppStore = create(
   persist(
     (set) => ({
-      isDemoMode: false,
+      isDemoMode: true,
       toggleDemoMode: () => set((state) => ({ isDemoMode: !state.isDemoMode })),
     }),
     {
