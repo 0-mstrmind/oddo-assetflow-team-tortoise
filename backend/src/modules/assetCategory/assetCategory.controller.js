@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import CatchAsync from "../../shared/utils/CatchAsync.js";
 import sendResponse from "../../shared/utils/ApiResponse.js";
-import ActivityLog from "../activityLog/activityLog.model.js";
+import { createActivityLogService } from "../activityLog/activityLog.service.js";
 import {
   createAssetCategoryService,
   getAssetCategoriesService,
@@ -13,7 +13,7 @@ import {
 // Helper function to log activities
 const logActivity = async (userId, action, entity, entityId, description) => {
   try {
-    await ActivityLog.create({
+    await createActivityLogService({
       userId,
       action,
       entity,

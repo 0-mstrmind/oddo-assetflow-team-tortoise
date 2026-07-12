@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth.store.js";
 import { login, logout, getMe, register, createEmployee } from "../services/auth.service.js";
+import { socketService } from "../services/socket.service.js";
 import { toast } from "sonner";
 
 const PROFILE_KEY = ["auth", "me"];
@@ -22,6 +23,7 @@ export const useMe = () => {
     queryFn: async () => {
       const user = await getMe();
       setUser(user);
+      socketService.connect();
       return user;
     },
     retry: false,
@@ -31,6 +33,7 @@ export const useMe = () => {
   useEffect(() => {
     if (query.isError) {
       clearUser();
+      socketService.disconnect();
     }
     if (query.isSuccess || query.isError) {
       setHydrated();
@@ -49,6 +52,7 @@ export const useLogin = (callbacks) => {
     mutationFn: ({ email, password }) => login({ email, password }),
     onSuccess: (user) => {
       setUser(user);
+      socketService.connect();
       qc.setQueryData(PROFILE_KEY, user);
       toast.success("Successfully logged in!");
       navigate("/dashboard");
@@ -96,6 +100,7 @@ export const useLogout = () => {
     },
     onSettled: () => {
       clearUser();
+      socketService.disconnect();
       qc.removeQueries({ queryKey: PROFILE_KEY });
       navigate("/login");
     },
