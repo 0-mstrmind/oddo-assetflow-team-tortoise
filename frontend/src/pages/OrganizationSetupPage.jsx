@@ -52,7 +52,10 @@ export default function OrganizationSetupPage() {
   const handleAddEmp = async (e) => {
     e.preventDefault();
     try {
-      await createEmployeeMutation(empForm);
+      // Strip empty departmentId — MongoDB rejects empty string as ObjectId
+      const payload = { ...empForm };
+      if (!payload.departmentId) delete payload.departmentId;
+      await createEmployeeMutation(payload);
       setIsEmpModalOpen(false);
       setEmpForm({ name: '', email: '', password: '', role: 'employee', departmentId: '' });
       fetchData();
@@ -347,7 +350,7 @@ export default function OrganizationSetupPage() {
                       <td className="py-4 px-6 text-[#6B7280]">{emp.departmentName}</td>
                       <td className="py-4 px-6">
                         <span className="font-semibold text-xs text-[#1E2022] capitalize">
-                          {emp.role === 'manager' ? 'Asset Manager' : emp.role === 'department_head' ? 'Department Head' : emp.role}
+                          {emp.role === 'manager' ? 'Asset Manager' : emp.role === 'auditor' ? 'Auditor' : emp.role === 'technician' ? 'Technician' : emp.role === 'admin' ? 'Administrator' : 'Employee'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -563,7 +566,8 @@ export default function OrganizationSetupPage() {
                   className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all"
                 >
                   <option value="employee">Employee</option>
-                  <option value="department_head">Department Head</option>
+                  <option value="auditor">Auditor</option>
+                  <option value="technician">Technician</option>
                   <option value="manager">Asset Manager</option>
                   <option value="admin">Administrator</option>
                 </select>
@@ -646,7 +650,8 @@ export default function OrganizationSetupPage() {
                   className="w-full h-11 px-4 bg-[#FAF7F5] border border-[#E8E2DC] rounded-xl text-sm text-[#1E2022] focus:border-[#D97736]/50 focus:ring-2 focus:ring-[#D97736]/10 focus:bg-white outline-none transition-all"
                 >
                   <option value="employee">Employee</option>
-                  <option value="department_head">Department Head</option>
+                  <option value="auditor">Auditor</option>
+                  <option value="technician">Technician</option>
                   <option value="manager">Asset Manager</option>
                   <option value="admin">Administrator</option>
                 </select>
