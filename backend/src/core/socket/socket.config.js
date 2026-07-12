@@ -8,7 +8,7 @@ let io;
 export const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
-            origin: "*", // allow all or use config.allowedOrigins if it exists
+            origin: config.allowedOrigins, // MUST be specific origins when credentials is true
             methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
             credentials: true,
         },

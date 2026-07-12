@@ -34,10 +34,11 @@ export const verifyRefreshToken = (token) => {
 
 // Set Cookie
 export const setCookie = (res, name, value, options = {}) => {
+  const isProd = config.nodeEnv === "production";
   const defaultOptions = {
     httpOnly: true,
-    secure: config.nodeEnv === "production",
-    sameSite: "strict",
+    secure: isProd, // Must be true if sameSite is 'none'
+    sameSite: isProd ? "none" : "lax", // 'none' allows cross-origin cookies in production
   };
 
   res.cookie(name, value, {
