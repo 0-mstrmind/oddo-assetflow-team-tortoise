@@ -12,6 +12,9 @@ import assetAllocationRoute from "../modules/assetAllocation/assetAllocation.rou
 import transferRequestRoute from "../modules/transferRequest/transferRequest.route.js";
 import resourceBookingRoute from "../modules/resourceBooking/resourceBooking.route.js";
 import maintenanceRequestRoute from "../modules/maintenanceRequest/maintenanceRequest.route.js";
+import auditCycleRoute from "../modules/auditCycle/auditCycle.route.js";
+import auditAssignmentRoute from "../modules/auditAssignment/auditAssignment.route.js";
+import auditResultRoute from "../modules/auditResult/auditResult.route.js";
 
 // instance
 const router = express.Router();
@@ -31,5 +34,8 @@ router.use("/allocations", assetAllocationRoute);
 router.use("/transfers", transferRequestRoute);
 router.use("/bookings", resourceBookingRoute);
 router.use("/maintenance", maintenanceRequestRoute);
+router.use("/audit-cycles", auditCycleRoute);
+router.use("/audit-assignments", auditAssignmentRoute);
+router.use("/audit-results", auditResultRoute);
 
 export default router;
