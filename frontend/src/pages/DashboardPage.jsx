@@ -8,11 +8,10 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import {
-  getDashboardKPIs,
   getDashboardAlerts,
-  getRecentActivity,
   getQuickActions,
 } from '@/services/api.mock';
+import { getDashboardData } from '@/services/dashboard.service';
 
 // ─── Icon Map for Activity Feed ──────────────────────────────────
 const ACTIVITY_ICON_MAP = {
@@ -178,17 +177,95 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchDashboardData() {
       setIsLoading(true);
-      const [kpiData, alertData, activityData, actionData] = await Promise.all([
-        getDashboardKPIs(),
-        getDashboardAlerts(),
-        getRecentActivity(),
-        getQuickActions(user?.role),
-      ]);
-      setKpis(kpiData);
-      setAlerts(alertData);
-      setActivity(activityData);
-      setQuickActions(actionData);
-      setIsLoading(false);
+      try {
+        const [dashboardBackend, alertData, actionData] = await Promise.all([
+          getDashboardData(),
+          getDashboardAlerts(),
+          getQuickActions(user?.role),
+        ]);
+
+        const metricsData = dashboardBackend?.metrics || {};
+        const backendActivities = dashboardBackend?.recentActivities || [];
+
+        // Map KPI metrics — default every field to 0 if backend returns null/undefined
+        setKpis({
+          available: { count: (metricsData.availableAssets || 0) + (metricsData.availableResources || 0), trend: '', trendDirection: 'neutral' },
+          allocated: { count: metricsData.allocatedAssets || 0, trend: '', trendDirection: 'neutral' },
+          activeBookings: { count: metricsData.activeBookings || 0, trend: '', trendDirection: 'neutral' },
+          pendingTransfers: { count: metricsData.pendingTransfers || 0, trend: '', trendDirection: 'neutral' },
+          upcomingReturns: { count: metricsData.upcomingReturns || 0, trend: '', trendDirection: 'neutral' },
+        });
+
+        // Set alerts, merging dynamic overdue alert if exists
+        const alertList = [...alertData];
+        if (metricsData.overdueReturns > 0) {
+          alertList.unshift({
+            id: 'alert_overdue',
+            type: 'overdue',
+            severity: 'warning',
+            message: `${metricsData.overdueReturns} asset${metricsData.overdueReturns > 1 ? 's' : ''} overdue for return`,
+            detail: 'Flagged for follow-up',
+            actionLabel: 'View Details',
+            actionHref: '/allocations?filter=overdue',
+          });
+        }
+        setAlerts(alertList);
+
+        // Map Activities
+        const mappedActivities = backendActivities.map(activity => {
+          const desc = (activity.description || '').toLowerCase();
+          let type = 'allocation';
+          let icon = 'laptop';
+          
+          if (desc.includes('return') || desc.includes('undone')) {
+            type = 'return';
+            icon = 'undo';
+          } else if (desc.includes('book') || desc.includes('calendar')) {
+            type = 'booking';
+            icon = 'calendar';
+          } else if (desc.includes('maintenance') || desc.includes('repair')) {
+            type = 'maintenance';
+            icon = 'wrench';
+          } else if (desc.includes('register') || desc.includes('create')) {
+            type = 'registration';
+            icon = 'plus-circle';
+          } else if (desc.includes('transfer')) {
+            type = 'transfer';
+            icon = 'arrow-right-left';
+          }
+
+          // Simple relative time conversion
+          const getRelativeTime = (dateString) => {
+            if (!dateString) return 'Just now';
+            const now = new Date();
+            const past = new Date(dateString);
+            const diffMs = now - past;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} min ago`;
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+            const diffDays = Math.floor(diffHours / 24);
+            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+          };
+
+          return {
+            id: activity._id || activity.id,
+            type,
+            icon,
+            description: activity.description,
+            actor: activity.userId?.name || activity.actor || 'System',
+            relativeTime: activity.createdAt ? getRelativeTime(activity.createdAt) : 'Just now'
+          };
+        });
+
+        setActivity(mappedActivities);
+        setQuickActions(actionData);
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchDashboardData();
   }, [user?.role]);
