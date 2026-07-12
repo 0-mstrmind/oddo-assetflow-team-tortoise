@@ -558,7 +558,14 @@ export async function createBooking(bookingData) {
 
 export async function getMaintenanceRequests() {
   await delay(200);
-  return getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
+  const data = getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
+  const uniqueMap = new Map();
+  data.forEach(item => {
+    uniqueMap.set(item.id, item);
+  });
+  const cleaned = Array.from(uniqueMap.values());
+  setStorageItem('af_maintenance', cleaned);
+  return cleaned;
 }
 
 export async function addMaintenanceRequest(data) {

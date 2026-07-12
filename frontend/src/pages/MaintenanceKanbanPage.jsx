@@ -41,7 +41,14 @@ export default function MaintenanceKanbanPage() {
   const fetchRequests = async () => {
     setIsLoading(true);
     const data = await getMaintenanceRequests();
-    setRequests(data);
+    
+    // Deduplicate by ID to heal any corrupt localStorage entries from previous duplication bugs
+    const uniqueMap = new Map();
+    data.forEach(item => {
+      uniqueMap.set(item.id, item);
+    });
+    
+    setRequests(Array.from(uniqueMap.values()));
     setIsLoading(false);
   };
 
@@ -63,31 +70,37 @@ export default function MaintenanceKanbanPage() {
       return;
     }
 
-    const sourceStatus = source.droppableId;
     const targetStatus = destination.droppableId;
 
-    const newRequests = Array.from(requests);
-    const sourceItems = newRequests.filter(r => r.status === sourceStatus);
-    const [draggedItem] = sourceItems.splice(source.index, 1);
+    // Create deep copy of requests array to avoid mutating React state directly
+    const copiedRequests = requests.map(r => ({ ...r }));
+
+    // Find the item index and remove it from the requests pool
+    const draggedItemIndex = copiedRequests.findIndex(r => r.id === draggableId);
+    if (draggedItemIndex === -1) return;
+
+    const [draggedItem] = copiedRequests.splice(draggedItemIndex, 1);
     
+    // Update its status field
     draggedItem.status = targetStatus;
 
-    if (sourceStatus === targetStatus) {
-      sourceItems.splice(destination.index, 0, draggedItem);
-      const otherItems = newRequests.filter(r => r.status !== sourceStatus);
-      setRequests([...otherItems, ...sourceItems]);
-    } else {
-      const targetItems = newRequests.filter(r => r.status === targetStatus);
-      targetItems.splice(destination.index, 0, draggedItem);
-      const otherItems = newRequests.filter(r => r.status !== sourceStatus && r.status !== targetStatus);
-      setRequests([...otherItems, ...sourceItems, ...targetItems]);
-    }
+    // Get all items in the target status column
+    const targetItems = copiedRequests.filter(r => r.status === targetStatus);
+    
+    // Insert the item at the correct destination index in the target column
+    targetItems.splice(destination.index, 0, draggedItem);
+
+    // Get all items not in the target column
+    const otherItems = copiedRequests.filter(r => r.status !== targetStatus);
+
+    // Update the state with the combined array
+    setRequests([...otherItems, ...targetItems]);
 
     try {
       await updateMaintenanceStatus(draggableId, targetStatus);
     } catch (err) {
       console.error(err);
-      fetchRequests();
+      fetchRequests(); // Rollback on error
     }
   };
 
