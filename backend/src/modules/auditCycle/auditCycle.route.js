@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(protect);
 
 // Only Admins and Asset Managers should manage audit cycles
-router.use(restrictTo("Admin", "Asset Manager"));
+router.use(restrictTo("admin", "manager"));
 
 router.post("/", validateBody(validation.createAuditCycleSchema), controller.createCycle);
 router.get("/", controller.getCycles);

@@ -10,7 +10,7 @@ router.use(protect);
 router.get("/my-assignments", controller.getMyAssignments);
 
 // Only Admins and Asset Managers can assign auditors
-router.use(restrictTo("Admin", "Asset Manager"));
+router.use(restrictTo("admin", "manager"));
 router.post("/", validateBody(validation.assignAuditorSchema), controller.assign);
 router.get("/cycle/:cycleId", controller.getCycleAssignments);
 

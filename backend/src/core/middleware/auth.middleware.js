@@ -8,8 +8,8 @@ export const protect = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   // Check for token in cookies or Authorization header
-  if (req.cookies && req.cookies.token) {
-    token = req.cookies.token;
+  if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
   } else if (authHeader && authHeader.startsWith("Bearer ")) {
     token = authHeader.split(" ")[1];
   }

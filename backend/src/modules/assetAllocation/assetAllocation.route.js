@@ -14,7 +14,7 @@ router.use(protect);
 router.get("/my-allocations", allocationController.getUserAllocations);
 
 // Admin / Manager / Dept Head routes
-router.use(restrictTo("Admin", "Asset Manager", "Department Head"));
+router.use(restrictTo("admin", "manager"));
 
 router.get("/", allocationController.getAllAllocations);
 router.get("/overdue", allocationController.getOverdueAllocations);
