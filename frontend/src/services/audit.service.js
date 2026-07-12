@@ -7,7 +7,18 @@ export const getAuditCycles = async () => {
 
 export const getAuditChecklist = async (cycleId) => {
   const { data } = await api.get(`/audit-cycles/${cycleId}/checklist`);
-  return data.checklist; // contains { checklist, totalAssets, auditedCount, pendingCount }
+  // backend sends: { checklist: { checklist: [...], totalAssets, auditedCount, pendingCount } }
+  return data.checklist ?? data;
+};
+
+export const getAllCycleResults = async (cycleId) => {
+  const { data } = await api.get(`/audit-results/cycle/${cycleId}`);
+  return data.results || [];
+};
+
+export const getAuditReports = async () => {
+  const { data } = await api.get("/audit-reports");
+  return data.reports || [];
 };
 
 export const verifyAuditAsset = async (body) => {

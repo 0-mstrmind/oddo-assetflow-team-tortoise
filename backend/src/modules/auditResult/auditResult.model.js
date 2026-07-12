@@ -19,6 +19,10 @@ const auditResultSchema = new mongoose.Schema({
     remarks: {
         type: String,
     },
+    condition: {
+        type: String,
+        trim: true,
+    },
 }, {
     timestamps: true,
 });

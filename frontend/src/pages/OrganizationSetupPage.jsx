@@ -97,7 +97,9 @@ export default function OrganizationSetupPage() {
   const [catForm, setCatForm] = useState({ name: '', description: '' });
   const [empForm, setEmpForm] = useState({ name: '', email: '', password: '', role: 'employee', departmentId: '' });
   const [newRole, setNewRole] = useState('employee');
-  const [newDepartment, setNewDepartment] = useState('');
+  const [newDepartmentId, setNewDepartmentId] = useState('');
+
+  const isEditingSelf = editEmp && (editEmp.email === user?.email || editEmp.id === user?.id || editEmp.id === user?.userid);
 
   const { mutateAsync: createEmployeeMutation } = useCreateEmployee();
 
@@ -252,10 +254,10 @@ export default function OrganizationSetupPage() {
     e.preventDefault();
     if (!editEmp) return;
     try {
-      const payload = { role: newRole };
-      if (newDepartment) payload.departmentId = newDepartment;
-      else payload.departmentId = null;
-
+      const payload = {
+        role: newRole,
+        departmentId: newDepartmentId || null,
+      };
       await updateEmployeeRole(editEmp.id, payload);
       toast.success('Employee updated successfully');
       setEditEmp(null);
@@ -498,18 +500,22 @@ export default function OrganizationSetupPage() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        {emp.id !== (user?._id || user?.id) && (
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => { setEditEmp(emp); setNewRole(emp.role); setNewDepartment(emp.departmentId?._id || emp.departmentId?.id || emp.departmentId || ''); }}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FAF7F5] hover:bg-[#F4EFEB] border border-[#E8E2DC] text-[#1E2022] text-xs font-semibold rounded-lg transition-colors">
-                              <Edit2 size={12} /> Edit Employee
-                            </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => {
+                            setEditEmp(emp);
+                            setNewRole(emp.role);
+                            setNewDepartmentId(emp.departmentId?._id || emp.departmentId?.id || emp.departmentId || '');
+                          }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FAF7F5] hover:bg-[#F4EFEB] border border-[#E8E2DC] text-[#1E2022] text-xs font-semibold rounded-lg transition-colors">
+                            <Edit2 size={12} /> Edit
+                          </button>
+                          {emp.id !== (user?._id || user?.id || user?.userid) && (
                             <button onClick={() => setDeleteConfirmEmp(emp)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FFF1F0] hover:bg-[#FFE4E2] border border-[#FFC9C6] text-red-600 text-xs font-semibold rounded-lg transition-colors">
                               <Trash2 size={12} /> Delete
                             </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -696,23 +702,42 @@ export default function OrganizationSetupPage() {
                 <p className="text-xs text-[#9CA3AF]">{editEmp.email}</p>
               </div>
             </div>
+
             <div className="space-y-1.5">
               <label className="block text-[13px] font-medium text-[#6B7280]">System Role</label>
-              <select value={newRole} onChange={e => setNewRole(e.target.value)} className={selectCls}>
+              <select
+                value={newRole}
+                onChange={e => setNewRole(e.target.value)}
+                className={selectCls}
+                disabled={isEditingSelf}
+              >
                 <option value="employee">Employee</option>
                 <option value="auditor">Auditor</option>
                 <option value="technician">Technician</option>
                 <option value="manager">Asset Manager</option>
                 <option value="admin">Administrator</option>
               </select>
+              {isEditingSelf && (
+                <p className="text-xs text-[#C85C27] font-semibold flex items-center gap-1.5 mt-1">
+                  <AlertTriangle size={12} /> You cannot change your own role.
+                </p>
+              )}
             </div>
+
             <div className="space-y-1.5">
               <label className="block text-[13px] font-medium text-[#6B7280]">Department</label>
-              <select value={newDepartment} onChange={e => setNewDepartment(e.target.value)} className={selectCls}>
+              <select
+                value={newDepartmentId}
+                onChange={e => setNewDepartmentId(e.target.value)}
+                className={selectCls}
+              >
                 <option value="">None / Unassigned</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
               </select>
             </div>
+
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setEditEmp(null)} className={cancelBtnCls}>Cancel</button>
               <button type="submit" className={saveBtnCls}>Save Changes</button>

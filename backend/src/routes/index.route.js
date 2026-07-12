@@ -22,6 +22,7 @@ import maintenanceRequestRoute from "../modules/maintenanceRequest/maintenanceRe
 import auditCycleRoute from "../modules/auditCycle/auditCycle.route.js";
 import auditAssignmentRoute from "../modules/auditAssignment/auditAssignment.route.js";
 import auditResultRoute from "../modules/auditResult/auditResult.route.js";
+import auditReportRoute from "../modules/auditReport/auditReport.route.js";
 import resourceRoute from "../modules/resource/resource.route.js";
 import activityLogRoute from "../modules/activityLog/activityLog.route.js";
 
@@ -53,6 +54,7 @@ router.use("/maintenance", maintenanceRequestRoute);
 router.use("/audit-cycles", auditCycleRoute);
 router.use("/audit-assignments", auditAssignmentRoute);
 router.use("/audit-results", auditResultRoute);
+router.use("/audit-reports", auditReportRoute);
 router.use("/resources", resourceRoute);
 router.use("/activity-logs", activityLogRoute);
 

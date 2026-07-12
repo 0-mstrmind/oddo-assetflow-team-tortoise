@@ -12,8 +12,8 @@ router.use(protect);
 // Retrieve and search assets directory
 router.get("/", validateQuery(searchAssetQuery), getAssets);
 
-// Register a new asset (restricted to admin)
-router.post("/", restrictTo("admin"), validateBody(createAssetInput), createAsset);
+// Register a new asset (restricted to admin, manager, auditor)
+router.post("/", restrictTo("admin", "manager", "auditor"), validateBody(createAssetInput), createAsset);
 
 // Retrieve single asset details with allocation and maintenance history
 router.get("/:id", validateParams(assetIdParam), getAssetById);
