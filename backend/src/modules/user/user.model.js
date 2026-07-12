@@ -12,6 +12,10 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+    companyName: {
+        type: String,
+        required: function() { return this.role === 'admin' && this.isNew; },
+    },
     password: {
         type: String,
         required: true,

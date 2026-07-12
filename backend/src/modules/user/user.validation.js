@@ -15,6 +15,10 @@ export const createUserInput = joi.object({
         'string.min': 'Password should have a minimum length of 6',
         'any.required': 'Password is required'
     }),
+    companyName: joi.string().min(2).required().messages({
+        'string.min': 'Company Name should have a minimum length of 2',
+        'any.required': 'Company Name is required'
+    }),
 });
 
 // Input for updating an existing user

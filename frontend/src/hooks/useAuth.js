@@ -61,7 +61,7 @@ export const useRegister = () => {
   const navigate = useNavigate();
 
   return useMutation({
-    mutationFn: ({ name, email, password }) => register({ name, email, password }),
+    mutationFn: ({ name, email, password, companyName }) => register({ name, email, password, companyName }),
     onSuccess: (user) => {
       setUser(user);
       qc.setQueryData(PROFILE_KEY, user);
