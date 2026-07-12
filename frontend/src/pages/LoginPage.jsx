@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useLogin, useRegister, extractMessage } from '@/hooks/useAuth';
 import { resendVerification } from '@/services/auth.service';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/auth.store';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -16,6 +17,13 @@ export default function LoginPage() {
   });
   const { mutate: register, isPending: isRegisterLoading } = useRegister();
   const isLoading = isLoginLoading || isRegisterLoading;
+  const user = useAuthStore((s) => s.user);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [showPassword, setShowPassword] = useState(false);

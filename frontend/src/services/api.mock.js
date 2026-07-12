@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store/useAppStore';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 
 /**
  * AssetFlow — Mock API Service Layer (Persistent in LocalStorage)
