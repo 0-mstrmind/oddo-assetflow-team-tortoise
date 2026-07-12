@@ -250,7 +250,7 @@ export default function OrganizationSetupPage() {
     }
   };
 
-  const handleUpdateRole = async (e) => {
+  const handleUpdateEmployee = async (e) => {
     e.preventDefault();
     if (!editEmp) return;
     try {
@@ -259,7 +259,7 @@ export default function OrganizationSetupPage() {
         departmentId: newDepartmentId || null,
       };
       await updateEmployeeRole(editEmp.id, payload);
-      toast.success('Employee details updated successfully');
+      toast.success('Employee updated successfully');
       setEditEmp(null);
       fetchData();
     } catch (err) {
@@ -504,15 +504,17 @@ export default function OrganizationSetupPage() {
                           <button onClick={() => {
                             setEditEmp(emp);
                             setNewRole(emp.role);
-                            setNewDepartmentId(emp.departmentId?._id || emp.departmentId || '');
+                            setNewDepartmentId(emp.departmentId?._id || emp.departmentId?.id || emp.departmentId || '');
                           }}
                             className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FAF7F5] hover:bg-[#F4EFEB] border border-[#E8E2DC] text-[#1E2022] text-xs font-semibold rounded-lg transition-colors">
                             <Edit2 size={12} /> Edit
                           </button>
-                          <button onClick={() => setDeleteConfirmEmp(emp)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FFF1F0] hover:bg-[#FFE4E2] border border-[#FFC9C6] text-red-600 text-xs font-semibold rounded-lg transition-colors">
-                            <Trash2 size={12} /> Delete
-                          </button>
+                          {emp.id !== (user?._id || user?.id || user?.userid) && (
+                            <button onClick={() => setDeleteConfirmEmp(emp)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#FFF1F0] hover:bg-[#FFE4E2] border border-[#FFC9C6] text-red-600 text-xs font-semibold rounded-lg transition-colors">
+                              <Trash2 size={12} /> Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -692,7 +694,7 @@ export default function OrganizationSetupPage() {
 
       {editEmp && (
         <Modal title="Edit Employee" onClose={() => setEditEmp(null)}>
-          <form onSubmit={handleUpdateRole} className="p-6 space-y-4">
+          <form onSubmit={handleUpdateEmployee} className="p-6 space-y-4">
             <div className="flex items-center gap-3 p-4 bg-[#FAF7F5] rounded-xl border border-[#F0EBE6]">
               <div className="w-10 h-10 rounded-lg bg-[#D97736]/20 flex items-center justify-center text-xs font-bold text-[#D97736]">{editEmp.initials}</div>
               <div>
@@ -703,9 +705,9 @@ export default function OrganizationSetupPage() {
 
             <div className="space-y-1.5">
               <label className="block text-[13px] font-medium text-[#6B7280]">System Role</label>
-              <select 
-                value={newRole} 
-                onChange={e => setNewRole(e.target.value)} 
+              <select
+                value={newRole}
+                onChange={e => setNewRole(e.target.value)}
                 className={selectCls}
                 disabled={isEditingSelf}
               >
@@ -724,12 +726,12 @@ export default function OrganizationSetupPage() {
 
             <div className="space-y-1.5">
               <label className="block text-[13px] font-medium text-[#6B7280]">Department</label>
-              <select 
-                value={newDepartmentId} 
-                onChange={e => setNewDepartmentId(e.target.value)} 
+              <select
+                value={newDepartmentId}
+                onChange={e => setNewDepartmentId(e.target.value)}
                 className={selectCls}
               >
-                <option value="">Unassigned</option>
+                <option value="">None / Unassigned</option>
                 {departments.map(d => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}

@@ -15,52 +15,76 @@ const FILTER_OPTIONS = [
   { id: 'bookings', label: 'Resource Bookings' },
 ];
 
+const getRelativeTime = (dateString) => {
+  if (!dateString) return 'Just now';
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffMs = now - past;
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+};
+
+const mapLog = (log) => {
+  const desc = (log.description || '').toLowerCase();
+  let category = 'general';
+  let isAlert = false;
+  
+  if (desc.includes('alert') || desc.includes('warn') || desc.includes('fail') || desc.includes('overdue')) {
+    category = 'alerts';
+    isAlert = true;
+  } else if (desc.includes('transfer') || desc.includes('approve') || desc.includes('reject')) {
+    category = 'approvals';
+  } else if (desc.includes('book') || desc.includes('reservation')) {
+    category = 'bookings';
+  }
+
+  return {
+    id: log._id || log.id,
+    text: log.description || `${log.action} ${log.entity}`,
+    category,
+    isAlert,
+    relativeTime: getRelativeTime(log.createdAt),
+  };
+};
+
 export default function NotificationsPage() {
   const [logs, setLogs] = useState([]);
   const [activeFilter, setActiveFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
 
+  useEffect(() => {
+    import('@/services/socket.service').then(({ socketService }) => {
+      const handleNewActivity = (newLog) => {
+        setLogs((prev) => {
+          const mapped = mapLog(newLog);
+          // Apply filter if necessary, but typically we add it and then filter handles rendering if we keep all in state.
+          // Wait, 'logs' state only holds filtered items from fetch!
+          // We should ideally keep raw/mapped all items, but for now we'll just add it if it matches the filter.
+          if (activeFilter !== 'all' && mapped.category !== activeFilter) {
+            return prev;
+          }
+          return [mapped, ...prev];
+        });
+      };
+      
+      socketService.on("NEW_ACTIVITY", handleNewActivity);
+      
+      return () => {
+        socketService.off("NEW_ACTIVITY", handleNewActivity);
+      };
+    }).catch(console.error);
+  }, [activeFilter]);
+
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
       const rawLogs = await getActivityLogs();
-      
-      const getRelativeTime = (dateString) => {
-        if (!dateString) return 'Just now';
-        const now = new Date();
-        const past = new Date(dateString);
-        const diffMs = now - past;
-        const diffMins = Math.floor(diffMs / (1000 * 60));
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins} min ago`;
-        const diffHours = Math.floor(diffMins / 60);
-        if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
-        const diffDays = Math.floor(diffHours / 24);
-        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-      };
-
-      const mappedLogs = rawLogs.map(log => {
-        const desc = (log.description || '').toLowerCase();
-        let category = 'general';
-        let isAlert = false;
-        
-        if (desc.includes('alert') || desc.includes('warn') || desc.includes('fail') || desc.includes('overdue')) {
-          category = 'alerts';
-          isAlert = true;
-        } else if (desc.includes('transfer') || desc.includes('approve') || desc.includes('reject')) {
-          category = 'approvals';
-        } else if (desc.includes('book') || desc.includes('reservation')) {
-          category = 'bookings';
-        }
-
-        return {
-          id: log._id || log.id,
-          text: log.description || `${log.action} ${log.entity}`,
-          category,
-          isAlert,
-          relativeTime: getRelativeTime(log.createdAt),
-        };
-      });
+      const mappedLogs = rawLogs.map(mapLog);
 
       const filtered = mappedLogs.filter(log => {
         if (activeFilter === 'all') return true;
