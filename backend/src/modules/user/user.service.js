@@ -94,17 +94,24 @@ export const createEmployeeService = async ({ name, email, password, role, depar
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
     role,
     departmentId,
-    isEmailVerified: true, // employees created by admin are implicitly verified
+    verificationToken,
+    isEmailVerified: false, // Default to false in all cases
   });
+
+  // Send Email with credentials and verification link in background
+  sendVerificationEmail(user.email, verificationToken, { password, role }).catch(console.error);
 
   const userObj = user.toObject();
   delete userObj.password;
+  delete userObj.verificationToken;
   delete userObj.__v;
 
   return { user: userObj };
