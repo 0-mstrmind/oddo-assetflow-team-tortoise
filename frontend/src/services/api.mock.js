@@ -1,15 +1,36 @@
+import { useAppStore } from '@/store/useAppStore';
+import { useAuthStore } from '@/store/useAuthStore';
+
 /**
  * AssetFlow — Mock API Service Layer (Persistent in LocalStorage)
- * 
- * ┌─────────────────────────────────────────────────────────────────┐
- * │  IMPORTANT: This file is the SINGLE SOURCE for all mock data.  │
- * │  When the backend is ready, replace the return statements      │
- * │  inside each function with actual fetch/axios calls.           │
- * │  The function signatures and return shapes MUST stay the same. │
- * └─────────────────────────────────────────────────────────────────┘
- * 
- * Every function returns a Promise to simulate async API behavior.
+ * Intercepted with a global isDemoMode check to redirect to the live backend API when disabled.
  */
+
+// Dynamic base URL resolver: defaults to port 4000 in dev mode, relative in prod
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:4000' : '');
+
+// Helper to make API calls to backend when demo mode is off
+async function apiRequest(path, options = {}) {
+  const token = useAuthStore.getState().token;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_URL}/api/v1${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || `API Error: ${response.status} ${response.statusText}`);
+  }
+
+  const res = await response.json();
+  return res.data !== undefined ? res.data : res;
+}
 
 // ─── Simulated Delay ──────────────────────────────────────────────
 const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
@@ -183,10 +204,18 @@ const DEFAULT_ACTIVITY_LOGS = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════
-//  AUTH API MOCKS
+//  AUTH API MOCKS / INTERCEPTS
 // ═══════════════════════════════════════════════════════════════════
 
 export async function mockSignIn(email, password) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
   await delay(500);
   if (!email || !password) throw new Error('Email and password are required.');
 
@@ -225,6 +254,14 @@ export async function mockSignIn(email, password) {
 }
 
 export async function mockSignUp(name, email, password) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    });
+  }
+
   await delay(600);
   if (!name || !email || !password) throw new Error('All fields are required.');
 
@@ -255,6 +292,11 @@ export async function mockSignUp(name, email, password) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getDepartments() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/departments');
+  }
+
   await delay(100);
   const departments = getStorageItem('af_departments', DEFAULT_DEPARTMENTS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
@@ -271,6 +313,14 @@ export async function getDepartments() {
 }
 
 export async function addDepartment(deptData) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/departments', {
+      method: 'POST',
+      body: JSON.stringify(deptData),
+    });
+  }
+
   await delay(150);
   const departments = getStorageItem('af_departments', DEFAULT_DEPARTMENTS);
   const newDept = {
@@ -286,11 +336,24 @@ export async function addDepartment(deptData) {
 }
 
 export async function getCategories() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/categories');
+  }
+
   await delay(100);
   return getStorageItem('af_categories', DEFAULT_CATEGORIES);
 }
 
 export async function addCategory(catData) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/categories', {
+      method: 'POST',
+      body: JSON.stringify(catData),
+    });
+  }
+
   await delay(150);
   const categories = getStorageItem('af_categories', DEFAULT_CATEGORIES);
   const newCat = {
@@ -305,6 +368,11 @@ export async function addCategory(catData) {
 }
 
 export async function getEmployees() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/employees');
+  }
+
   await delay(100);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
   const departments = getStorageItem('af_departments', DEFAULT_DEPARTMENTS);
@@ -319,6 +387,14 @@ export async function getEmployees() {
 }
 
 export async function updateEmployeeRole(employeeId, newRole) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest(`/employees/${employeeId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role: newRole }),
+    });
+  }
+
   await delay(150);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
   const index = employees.findIndex(e => e.id === employeeId);
@@ -335,6 +411,11 @@ export async function updateEmployeeRole(employeeId, newRole) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getAssets() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/assets');
+  }
+
   await delay(150);
   const assets = getStorageItem('af_assets', DEFAULT_ASSETS);
   const categories = getStorageItem('af_categories', DEFAULT_CATEGORIES);
@@ -352,6 +433,14 @@ export async function getAssets() {
 }
 
 export async function registerAsset(assetData) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/assets', {
+      method: 'POST',
+      body: JSON.stringify(assetData),
+    });
+  }
+
   await delay(200);
   const assets = getStorageItem('af_assets', DEFAULT_ASSETS);
   const nextNum = String(assets.length + 1).padStart(4, '0');
@@ -383,6 +472,11 @@ export async function registerAsset(assetData) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getAllocationHistory(assetId) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest(`/allocations/history/${assetId}`);
+  }
+
   await delay(100);
   const allocations = getStorageItem('af_allocations', DEFAULT_ALLOCATIONS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
@@ -402,6 +496,14 @@ export async function getAllocationHistory(assetId) {
 }
 
 export async function allocateAsset(assetId, employeeId, expectedReturnDate, allocatedById) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/allocations', {
+      method: 'POST',
+      body: JSON.stringify({ assetId, employeeId, expectedReturnDate, allocatedById }),
+    });
+  }
+
   await delay(200);
   const assets = getStorageItem('af_assets', DEFAULT_ASSETS);
   const allocations = getStorageItem('af_allocations', DEFAULT_ALLOCATIONS);
@@ -439,6 +541,14 @@ export async function allocateAsset(assetId, employeeId, expectedReturnDate, all
 }
 
 export async function submitTransferRequest(assetId, toEmployeeId, reason, requestedById) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/transfers', {
+      method: 'POST',
+      body: JSON.stringify({ assetId, toEmployeeId, reason, requestedById }),
+    });
+  }
+
   await delay(150);
   const transfers = getStorageItem('af_transfers', DEFAULT_TRANSFERS);
   const allocations = getStorageItem('af_allocations', DEFAULT_ALLOCATIONS);
@@ -468,11 +578,24 @@ export async function submitTransferRequest(assetId, toEmployeeId, reason, reque
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getResources() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/resources');
+  }
+
   await delay(100);
   return getStorageItem('af_resources', DEFAULT_RESOURCES);
 }
 
 export async function addResource(resData) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/resources', {
+      method: 'POST',
+      body: JSON.stringify(resData),
+    });
+  }
+
   await delay(150);
   const resources = getStorageItem('af_resources', DEFAULT_RESOURCES);
   const newRes = {
@@ -488,6 +611,11 @@ export async function addResource(resData) {
 }
 
 export async function getBookings(resourceId, date) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest(`/bookings?resourceId=${resourceId}&date=${date}`);
+  }
+
   await delay(150);
   const bookings = getStorageItem('af_bookings', DEFAULT_BOOKINGS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
@@ -509,6 +637,14 @@ function timeToMinutes(timeStr) {
 }
 
 export async function createBooking(bookingData) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/bookings', {
+      method: 'POST',
+      body: JSON.stringify(bookingData),
+    });
+  }
+
   await delay(200);
   const bookings = getStorageItem('af_bookings', DEFAULT_BOOKINGS);
   const employees = getStorageItem('af_employees', DEFAULT_EMPLOYEES);
@@ -557,6 +693,11 @@ export async function createBooking(bookingData) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getMaintenanceRequests() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/maintenance');
+  }
+
   await delay(200);
   const data = getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
   const uniqueMap = new Map();
@@ -569,6 +710,14 @@ export async function getMaintenanceRequests() {
 }
 
 export async function addMaintenanceRequest(data) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/maintenance', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   await delay(250);
   const list = getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
   const newReq = {
@@ -586,6 +735,14 @@ export async function addMaintenanceRequest(data) {
 }
 
 export async function updateMaintenanceStatus(id, newStatus) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest(`/maintenance/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus }),
+    });
+  }
+
   await delay(150);
   const list = getStorageItem('af_maintenance', DEFAULT_MAINTENANCE);
   const index = list.findIndex(m => m.id === id);
@@ -602,16 +759,34 @@ export async function updateMaintenanceStatus(id, newStatus) {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getActiveAuditCycle() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/audits/active');
+  }
+
   await delay(100);
   return getStorageItem('af_audit_cycle', DEFAULT_AUDIT_CYCLE);
 }
 
 export async function getAuditAssets() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/audits/assets');
+  }
+
   await delay(200);
   return getStorageItem('af_audit_assets', DEFAULT_AUDIT_ASSETS);
 }
 
 export async function verifyAuditAsset(id, newStatus) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest(`/audits/assets/${id}/verify`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus }),
+    });
+  }
+
   await delay(100);
   const list = getStorageItem('af_audit_assets', DEFAULT_AUDIT_ASSETS);
   const index = list.findIndex(a => a.id === id);
@@ -624,6 +799,11 @@ export async function verifyAuditAsset(id, newStatus) {
 }
 
 export async function closeAuditCycle() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/audits/close', { method: 'POST' });
+  }
+
   await delay(300);
   const list = getStorageItem('af_audit_assets', DEFAULT_AUDIT_ASSETS);
   
@@ -646,6 +826,11 @@ export async function closeAuditCycle() {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getActivityLogs(category = 'all') {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest(`/activity-logs?category=${category}`);
+  }
+
   await delay(150);
   const logs = getStorageItem('af_activity_logs', DEFAULT_ACTIVITY_LOGS);
   if (category === 'all') return logs;
@@ -657,6 +842,11 @@ export async function getActivityLogs(category = 'all') {
 // ═══════════════════════════════════════════════════════════════════
 
 export async function getDashboardKPIs() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/dashboard/kpis');
+  }
+
   await delay(100);
   const assets = getStorageItem('af_assets', DEFAULT_ASSETS);
   const available = assets.filter(a => a.status === 'available').length;
@@ -673,6 +863,11 @@ export async function getDashboardKPIs() {
 }
 
 export async function getDashboardAlerts() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/dashboard/alerts');
+  }
+
   await delay(100);
   return [
     {
@@ -699,6 +894,11 @@ export async function getDashboardAlerts() {
 }
 
 export async function getRecentActivity() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/dashboard/activity');
+  }
+
   await delay(100);
   return [
     {
@@ -735,6 +935,11 @@ export async function getRecentActivity() {
 }
 
 export async function getQuickActions(role) {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest(`/dashboard/quick-actions?role=${role}`);
+  }
+
   const actions = [];
   if (role === 'admin' || role === 'manager') {
     actions.push({
@@ -760,6 +965,11 @@ export async function getQuickActions(role) {
 }
 
 export async function getNavigationItems() {
+  const isDemoMode = useAppStore.getState().isDemoMode;
+  if (!isDemoMode) {
+    return apiRequest('/navigation');
+  }
+
   return [
     { id: 'dashboard',      label: 'Dashboard',             icon: 'layout-dashboard', href: '/dashboard' },
     { id: 'organization',   label: 'Organization Setup',    icon: 'building-2',       href: '/organization' },

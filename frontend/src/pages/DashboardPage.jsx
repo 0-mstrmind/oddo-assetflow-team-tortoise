@@ -6,7 +6,8 @@ import {
   Laptop, Undo2, Calendar, Wrench, PlusCircle, ClipboardCheck,
   ArrowRight, ChevronRight,
 } from 'lucide-react';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useAppStore } from '@/store/useAppStore';
 import {
   getDashboardAlerts,
   getQuickActions,
@@ -167,7 +168,9 @@ function ActivityItem({ activity, isLast }) {
 // ═══════════════════════════════════════════════════════════════════
 
 export default function DashboardPage() {
-  const user = useAuthStore(s => s.user);
+  const { user } = useAuthStore();
+  const { isDemoMode, toggleDemoMode } = useAppStore();
+  
   const [kpis, setKpis] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [activity, setActivity] = useState([]);
@@ -268,7 +271,7 @@ export default function DashboardPage() {
       }
     }
     fetchDashboardData();
-  }, [user?.role]);
+  }, [user?.role, isDemoMode]);
 
   const dismissAlert = (id) => {
     setAlerts((prev) => prev.filter((a) => a.id !== id));
@@ -300,13 +303,28 @@ export default function DashboardPage() {
   return (
     <div className="space-y-7">
       {/* ── Header ── */}
-      <div>
-        <p className="text-sm text-[#9CA3AF] font-medium mb-0.5">
-          {greeting}, {user?.name?.split(' ')[0] || 'there'}
-        </p>
-        <h1 className="text-2xl md:text-[1.75rem] font-bold text-[#1E2022] tracking-[-0.02em]">
-          Today's Overview
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-sm text-[#9CA3AF] font-medium mb-0.5">
+            {greeting}, {user?.name?.split(' ')[0] || 'there'}
+          </p>
+          <h1 className="text-2xl md:text-[1.75rem] font-bold text-[#1E2022] tracking-[-0.02em]">
+            Today's Overview
+          </h1>
+        </div>
+
+        {/* Demo Mode Toggle Switch */}
+        <button
+          onClick={toggleDemoMode}
+          className={`h-9 px-4.5 rounded-full text-xs font-semibold border flex items-center gap-2 transition-all active:scale-[0.98] ${
+            isDemoMode
+              ? 'bg-[#1E4620]/[0.06] border-[#1E4620]/15 text-[#1E4620]'
+              : 'border-[#E8E2DC] text-[#1E2022] hover:bg-[#FAF7F5] bg-white'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${isDemoMode ? 'bg-[#1E4620] animate-pulse' : 'bg-gray-400'}`} />
+          {isDemoMode ? 'Demo Data: ON' : 'Load Demo Data'}
+        </button>
       </div>
 
       {/* ── Alert Banners ── */}
